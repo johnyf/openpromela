@@ -1,0 +1,3 @@
+clean:
+	rm *.txt *.pdf
+
