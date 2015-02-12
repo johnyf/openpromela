@@ -1,3 +1,4 @@
+import pip
 from setuptools import setup
 
 
@@ -16,6 +17,13 @@ s = (
 
 
 if __name__ == '__main__':
+    pip.main([
+        'install',
+        '--allow-unverified', 'promela == 0.0.1',
+        'https://github.com/johnyf/promela/archive/master.zip',
+        '--allow-unverified', 'tulip >= 1.2.dev',
+        'https://github.com/johnyf/tulip-control/archive/easysetup.zip',
+        'psutil >= 2.2.0'])
     with open(VERSION_FILE, 'w') as f:
         f.write(s)
     # build parser table
@@ -38,7 +46,10 @@ if __name__ == '__main__':
         url='https://github.com/johnyf/openpromela',
         license='BSD',
         install_requires=[
-            'networkx >= 1.9.1', 'promela', 'tulip >= 1.2.dev'],
+            'promela >= 0.0.1',
+            'networkx >= 1.9.1',
+            'tulip >= 1.2.dev',
+            'psutil >= 2.2.0'],
         tests_require=['nose'],
         packages=['openpromela'],
         package_dir={'openpromela': 'openpromela'},
