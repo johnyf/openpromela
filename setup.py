@@ -16,6 +16,14 @@ s = (
     "version = '{version}'\n").format(version=version)
 
 
+def build_parser_table():
+    from openpromela import logic
+    tabmodule = logic.TABMODULE.split('.')[-1]
+    outputdir = 'openpromela/'
+    parser = logic.Parser()
+    parser.build(tabmodule, outputdir=outputdir, write_tables=True)
+
+
 if __name__ == '__main__':
     pip.main([
         'install',
@@ -26,16 +34,7 @@ if __name__ == '__main__':
         'psutil >= 2.2.0'])
     with open(VERSION_FILE, 'w') as f:
         f.write(s)
-    # build parser table
-    try:
-        from openpromela import logic
-        tabmodule = logic.TABMODULE.split('.')[-1]
-        outputdir = 'openpromela/'
-        parser = logic.Parser()
-        parser.build(tabmodule, outputdir=outputdir, write_tables=True)
-        plytable_build_failed = False
-    except ImportError:
-        plytable_build_failed = True
+    build_parser_table()
     setup(
         name='openpromela',
         version=version,
@@ -56,7 +55,3 @@ if __name__ == '__main__':
         entry_points={
             'console_scripts':
                 ['ospin = openpromela.logic:command_line_wrapper']})
-    if plytable_build_failed:
-        print(
-            'ERROR: failed to build parser table.'
-            'Please run setup.py again.')
