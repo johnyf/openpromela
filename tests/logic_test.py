@@ -17,6 +17,32 @@ logging.getLogger('promela.yacc.parser').setLevel('ERROR')
 logging.getLogger('tulip').setLevel('ERROR')
 
 
+def test_conj():
+    f = logic._conj
+    assert f(['a', 'b']) == '(a) & (b)'
+    assert f(['a', 'b', 'c', 'd']) == '((a) & (b)) & ((c) & (d))'
+    assert f(['a', 'True']) == 'a'
+    assert f(['a', 'False']) == 'False'
+    assert f(['True', 'True', 'b', 'c']) == '(b) & (c)'
+    assert f([]) == 'True'
+    assert f(str(x) for x in xrange(1)) == '0'
+    assert f(str(x) for x in []) == 'True'
+    assert f(['', 'a', 'b']) == '(a) & (b)'
+
+
+def test_disj():
+    f = logic._disj
+    assert f(['a', 'b']) == '(a) | (b)'
+    assert f(['a', 'b', 'c', 'd']) == '((a) | (b)) | ((c) | (d))'
+    assert f(['a', 'False']) == 'a'
+    assert f(['a', 'True']) == 'True'
+    assert f(['False', 'False', 'b', 'c']) == '(b) | (c)'
+    assert f([]) == 'False'
+    assert f(str(x) for x in xrange(1)) == '0'
+    assert f(str(x) for x in []) == 'False'
+    assert f(['', 'a', 'b']) == '(a) | (b)'
+
+
 def test_trivial_unrealizable():
     """If realizable, then the assumption is False."""
     c = '''
