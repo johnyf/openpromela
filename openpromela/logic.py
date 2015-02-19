@@ -1925,6 +1925,7 @@ def command_line_wrapper():
     logs = {'openpromela.logic',
             'openpromela.bitvector'}
     slugs_log_name = 'openpromela.bitvector.slugs'
+    debug_log_file = 'debug_log.txt'
     parser = argparse.ArgumentParser(
         description=(
             'Synthesizer from open Promela.\n\n'
@@ -1946,10 +1947,14 @@ def command_line_wrapper():
     parser.add_argument(
         '--version', action='version', version=version.version)
     args = parser.parse_args()
+    level = args.debug
+    fh = logging.FileHandler(debug_log_file, mode='w')
     for name in logs:
         log = logging.getLogger(name)
-        log.setLevel(args.debug)
+        log.setLevel(level)
+        log.addHandler(fh)
     sh = logging.StreamHandler()
+    sh.setLevel(level)
     slugs_log = logging.getLogger(slugs_log_name)
     slugs_log.addHandler(sh)
     with open(args.fname, 'r') as f:
