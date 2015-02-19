@@ -23,6 +23,7 @@ import subprocess
 import tempfile
 import textwrap
 import time
+import humanize
 import networkx as nx
 import ply.lex
 import ply.yacc
@@ -825,7 +826,9 @@ def _call_slugs(filename, symbolic=True, bddfile=None, real=True):
             t = user + system
             dt = datetime.timedelta(seconds=t)
             s = 'time: {dt}, rss: {rss}, vms: {vms}'.format(
-                dt=dt, rss=rss, vms=vms)
+                dt=dt,
+                rss=humanize.naturalsize(rss),
+                vms=humanize.naturalsize(vms))
             slugs_log.info(s)
         except psutil.AccessDenied:
             logger.debug('slugs has terminated already.')
