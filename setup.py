@@ -31,7 +31,8 @@ if __name__ == '__main__':
         'https://github.com/johnyf/promela/archive/master.zip',
         '--allow-unverified', 'tulip >= 1.2.dev',
         'https://github.com/johnyf/tulip-control/archive/easysetup.zip',
-        'psutil >= 2.2.0'])
+        'psutil >= 2.2.0',
+        'humanize >= 0.5.1'])
     with open(VERSION_FILE, 'w') as f:
         f.write(s)
     build_parser_table()
