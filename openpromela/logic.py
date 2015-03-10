@@ -847,49 +847,10 @@ def array_to_flatnames(flatname, length):
 
 
 def products_to_logic(products, global_defs):
-    max_key = 0
-    trans = dict()
-    progress = dict()
-    var2edges = dict()
-    notexe = dict()
-    pcmust = dict()
     t = VariablesTable()
-    init['global'] = add_variables_to_table(
-        t, global_defs, pid='global', assume_context='sys')
-    max_gid = {'env': 0, 'sys': 0}
-    for p in products:
-        if isinstance(p, AST.Proctype):
-            assume = p.assume
-        elif isinstance(p, AST.Product):
-            proc = next(iter(p.body))
-            assume = proc.assume
-        else:
-            raise TypeError()
-        max_gid[assume] += 1
-    gids = {'env': 0, 'sys': 0}
-    for p in products:
-        if isinstance(p, AST.Proctype):
-            assume = p.assume
-            gid = gids[assume]
-            i, tr, prog, v2e, nexe, pm, mk = proctypes_to_logic(
-                gid, [p], t, max_gid[assume])
-        elif isinstance(p, AST.Product):
-            assert p.sync  # for now allow only sync product groups
-            proc = next(iter(p.body))
-            assume = proc.assume
-            gid = gids[assume]
-            i, tr, prog, v2e, nexe, pm, mk = proctypes_to_logic(
-                gid, p.body, t, max_gid[assume], max_active=1)
-            # TODO: collect group var decls
-        else:
-            raise TypeError('group of type "{t}"'.format(t=type(p)))
-        trans.update(tr)
-        progress.update(prog)
-        var2edges.update(v2e)
-        notexe.update(nexe)
-        pcmust.update(pm)
-        max_key = max(max_key, mk)
-        gids[assume] += 1
+    add_variables_to_table(t, global_defs, pid='global', assume_context='sys')
+    proctypes, max_gids = flatten_products(products, t)
+    pids = add_processes(proctypes, max_gids, t)
     # find number of keys needed
     # in sync prod multiple program graphs mv simultaneously
     n_keys = dict(env=dict(env=1), sys=dict(env=1, sys=1))
@@ -920,7 +881,9 @@ def products_to_logic(products, global_defs):
                         side='assumptions'
                         if assume == 'env' else 'assertions'))
     # add key vars to table
-    init_keys = {'env': list(), 'sys': list()}
+    max_key = 0
+    for g, _, _ in proctypes:
+        max_key = max(max_key, g.max_key)
     for assume, d in n_keys.iteritems():
         for owner, nk in d.iteritems():
             for i in xrange(nk):
@@ -930,47 +893,54 @@ def products_to_logic(products, global_defs):
                           dom=dom, dtype='saturating', free=True,
                           owner=owner, init=0)
     # assemble spec
-    env_imp = constrain_imperative_vars(var2edges, t, 'env')
-    sys_imp = constrain_imperative_vars(var2edges, t, 'sys')
+    env_imp = constrain_imperative_vars(pids, t, 'env')
+    sys_imp = constrain_imperative_vars(pids, t, 'sys')
     env_decl, sys_decl = constrain_local_declarative_vars(t)
     env_safe = [env_imp, env_decl]
     sys_safe = [sys_imp, sys_decl]
     for player in {'env', 'sys'}:
-        ei, si, e, s = add_process_scheduler(t, trans, notexe, pcmust, player)
+        e, s = add_process_scheduler(t, pids, player)
         env_safe.append(e)
         sys_safe.append(s)
     env_safe = _conj(env_safe)
     sys_safe = _conj(sys_safe)
-    env_prog = [y for x in progress.itervalues()
-                for y in x['env']]
-    sys_prog = [y for x in progress.itervalues()
-                for y in x['sys']]
-    return (
-        t, env_init, sys_init, env_safe, sys_safe,
-        env_prog, sys_prog, max_gid)
+    env_prog = [y for x in pids.itervalues()
+                for y in x['progress']['env']]
+    sys_prog = [y for x in pids.itervalues()
+                for y in x['progress']['sys']]
+    return (t, env_safe, sys_safe,
+            env_prog, sys_prog, max_gids)
 
 
-def proctypes_to_logic(gid, proctypes, t, max_gid, max_active=None):
-    max_key = 0
-    trans = dict()
-    progress = dict()
-    var2edges = dict()
-    notexe = dict()
-    pcmust = dict()
-    # lid = local id inside a sync product
-    for lid, p in enumerate(proctypes):
-        i, tr, prog, v2e, nexe, pm, mk = proctype_to_logic(
-            gid, lid, p, t, max_gid, max_active)
-        trans.update(tr)
-        progress.update(prog)
-        var2edges.update(v2e)
-        notexe.update(nexe)
-        pcmust.update(pm)
-        max_key = max(max_key, mk)
-    return init, trans, progress, var2edges, notexe, pcmust, max_key
+def flatten_products(products, t):
+    """Flatten nested (a)synchronous products."""
+    max_gids = {'env': 0, 'sys': 0}
+    proctypes = list()
+    for p in products:
+        if isinstance(p, AST.Proctype):
+            assume = p.assume
+            gid = max_gids[assume]
+            lid = 0
+            g = proctype_to_graph(p, t)
+            proctypes.append((g, gid, lid))
+        elif isinstance(p, AST.Product):
+            assert p.sync  # for now allow only sync product groups
+            proc = next(iter(p.body))
+            assume = proc.assume
+            gid = max_gids[assume]
+            # lid = local id inside a sync product
+            for lid, p in enumerate(p.body):
+                g = proctype_to_graph(p, 1)
+                proctypes.append((g, gid, lid))
+            # TODO: collect group var decls
+        else:
+            raise TypeError('group of type "{t}"'.format(t=type(p)))
+        max_gids[assume] += 1
+    return proctypes, max_gids
 
 
-def proctype_to_logic(gid, lid, p, t, max_gid, max_active=None):
+def proctype_to_graph(p, max_active=None):
+    """Return control program graph for proctype `p`."""
     name = p.name
     active = p.active
     logger.info('++ translating proctype "{name}"...'.format(
@@ -987,31 +957,13 @@ def proctype_to_logic(gid, lid, p, t, max_gid, max_active=None):
     g = p.to_pg()
     # contiguous node indexing ?
     assert all(0 <= u < len(g) for u in g), g.nodes()
+    # attr
     g.name = p.name
     g.owner = p.owner
     g.assume = p.assume
-    max_key = max_edge_multiplicity(g)
-    # instantiate each instance
-    trans = dict()
-    progress = dict()
-    var2edges = dict()
-    notexe = dict()
-    pcmust = dict()
-    # above it is ensured that in sync products only 1 active
-    for j in xrange(active):
-        logger.info('\t instance {j}'.format(j=j))
-        pid, i, tr, prog, v2e, nexe, pm = process_to_logic(
-            gid, lid, g, t, max_gid)
-        init[pid] = i
-        trans[pid] = tr
-        progress[pid] = prog
-        var2edges[pid] = v2e
-        notexe[pid] = nexe
-        if pm:
-            pcmust[pid] = pm
-    logger.info('-- done with proctype "{name}".\n'.format(
-        name=name))
-    return init, trans, progress, var2edges, notexe, pcmust, max_key
+    g.active = p.active
+    g.max_key = max_edge_multiplicity(g)
+    return g
 
 
 def max_edge_multiplicity(g, n=None):
@@ -1022,6 +974,20 @@ def max_edge_multiplicity(g, n=None):
     else:
         nbunch = g
     return max(len(uv) for u in nbunch for v, uv in g.succ[u].iteritems())
+
+
+def add_processes(proctypes, max_gids, t):
+    """Instantiate processes for each proctype in `proctypes`."""
+    # instantiate each proctype
+    pids = dict()
+    for g, gid, lid in proctypes:
+        # above it is ensured that in sync products only 1 active
+        for j in xrange(g.active):
+            logger.info('\t instance {j}'.format(j=j))
+            max_gid = max_gids[g.assume]
+            process_to_logic(gid, lid, g, t, max_gid, pids)
+        logger.info('-- done with proctype "{name}".\n'.format(name=g.name))
+    return pids
 
 
 # a process is an instance of a proctype
@@ -1039,10 +1005,17 @@ def process_to_logic(gid, lid, g, t, max_gid, pids):
     if g.assume == 'sys' and g.owner == 'env':
         pcmust = graph_to_guards(g, t, pid)
     else:
-        pcmust = ''
+        pcmust = None
+    # add to dict of pids
+    d = dict(
+        trans=trans,  # data flow
+        progress=progress,  # progress labels
+        var2edges=var2edges,  # imperative var deconstraining
+        notexe=notexe,  # blocked
+        pcmust=pcmust)  # control flow
+    pids[pid] = d
     logger.debug('transitions of process "{pc}":\n {t}'.format(
                  pc=pc, t=trans))
-    return pid, init, trans, progress, var2edges, notexe, pcmust
 
 
 def add_variables_to_table(t, r, pid, assume_context):
@@ -1351,7 +1324,7 @@ def scaffold(u, g=None):
     return g
 
 
-def constrain_imperative_vars(var2edges, t, player='sys'):
+def constrain_imperative_vars(pids, t, player='sys'):
     """Return default constraints for imperative variables."""
     gl = list()
     # locals
@@ -1364,6 +1337,7 @@ def constrain_imperative_vars(var2edges, t, player='sys'):
         # proctype constrains owner
         if t.pids[pid]['assume'] != player:
             continue
+        var2edges = pids[pid]['var2edges']
         for var, d in localvars.iteritems():
             flatname = d['flatname']
             # has declarative semantics ?
@@ -1378,8 +1352,8 @@ def constrain_imperative_vars(var2edges, t, player='sys'):
                         player=player))
                 continue
             # has assignment edges or is primed in actions ?
-            if var in var2edges[pid]:
-                edges = var2edges[pid][var]
+            if var in var2edges:
+                edges = var2edges[var]
                 free_trans, array_inv = _constrain_imperative_var(
                     t, pid, var, edges)
                 inv = _invariant(flatname, d['dom'], d['length'])
@@ -1417,8 +1391,9 @@ def constrain_imperative_vars(var2edges, t, player='sys'):
             continue
         b = list()
         z = list()
-        for pid, v2e in var2edges.iteritems():
+        for pid in pids:
             # local var with same name exists ?
+            v2e = pids[pid]['var2edges']
             localvars = t.scopes.get(pid)
             if localvars is not None and var in localvars:
                 # local shadows global
@@ -1547,7 +1522,7 @@ def constrain_local_declarative_vars(t):
     return c['env'], c['sys']
 
 
-def add_process_scheduler(t, trans, notexe, pcmust, player):
+def add_process_scheduler(t, pids, player):
     logger.info('adding process scheduler...')
     assert player in {'env', 'sys'}
     # env controls both selectors:
@@ -1559,10 +1534,9 @@ def add_process_scheduler(t, trans, notexe, pcmust, player):
     # clauses
     ps = ps_str(player)
     deadlock = dict()
-    init = {'env': list(), 'sys': list()}
     safety = {'env': list(), 'sys': list()}
     gids = set()
-    for pid, f in trans.iteritems():
+    for pid, f in pids.iteritems():
         # pid constrains given player ?
         dpid = t.pids[pid]
         assume = dpid['assume']
@@ -1593,7 +1567,7 @@ def add_process_scheduler(t, trans, notexe, pcmust, player):
         safety[assume].append((
             '\n# dataflow constraint:\n'
             '((X {ps} = {gid}) -> ({trans}))').format(
-                ps=ps, gid=gid, trans=f))
+                ps=ps, gid=gid, trans=f['trans']))
         # idle program counter
         safety[pc_owner].append((
             '\n# idle program counter:\n'
@@ -1604,9 +1578,9 @@ def add_process_scheduler(t, trans, notexe, pcmust, player):
             safety[pc_owner].append(
                 '\n# prevent env from selecting blocked edge\n'
                 '( (X {ps} = {gid}) -> ({pcmust}) )'.format(
-                    ps=ps, gid=gid, pcmust=pcmust[pid]))
+                    ps=ps, gid=gid, pcmust=pids[pid]['pcmust']))
         # prevent scheduler from selecting a non-executable process
-        blocks_if = notexe[pid]
+        blocks_if = pids[pid]['notexe']
         safety['env'].append((
             '\n# prevent scheduler from selecting blocked process\n'
             '({nexe}) -> (X {ps} != {gid})').format(
