@@ -13,6 +13,8 @@ bit_log.addHandler(h)
 log = logging.getLogger('openpromela.logic')
 log.setLevel(5)
 # log.addHandler(logging.StreamHandler())
+# avoid nose dumping PDFs
+logging.getLogger('promela.ast').setLevel('ERROR')
 logging.getLogger('promela.yacc.parser').setLevel('ERROR')
 logging.getLogger('tulip').setLevel('ERROR')
 
