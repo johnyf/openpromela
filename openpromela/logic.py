@@ -1073,7 +1073,7 @@ def add_edge_formulae(h, g, t, pid):
     # copy context for each node
     for u, d in g.nodes_iter(data=True):
         h.add_node(u, context=d['context'])
-    if logger.getEffectiveLevel() < logging.DEBUG:
+    if logger.getEffectiveLevel() == 1:
         ast.dump_graph(
             g, fname='pid_{pid}_pg.pdf'.format(pid=pid), edge_label='stmt')
         ast.dump_graph(
