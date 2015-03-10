@@ -708,15 +708,17 @@ class VariablesTable(object):
         assert name not in self.scopes[pid], (name, pid)
         self.scopes[pid][name] = d
 
-    def add_pid(self, pid, proctype_name, owner, gid, lid, assume):
+    def add_pid(self, proctype_name, owner, gid, lid, assume):
         assert owner in {'env', 'sys'}
         assert assume in {'env', 'sys'}
+        pid = len(self.pids)
         self.pids[pid] = {
             'proctype': proctype_name,
             'owner': owner,
             'gid': gid,
             'lid': lid,
             'assume': assume}
+        return pid
 
     def add_program_counter(self, pid, n, owner, init):
         pc = pid_to_pc(pid)
@@ -1023,9 +1025,8 @@ def max_edge_multiplicity(g, n=None):
 
 
 # a process is an instance of a proctype
-def process_to_logic(gid, lid, g, t, max_gid):
-    pid = len(t.pids)
-    t.add_pid(pid, g.name, g.owner, gid, lid, assume=g.assume)
+def process_to_logic(gid, lid, g, t, max_gid, pids):
+    pid = t.add_pid(g.name, g.owner, gid, lid, assume=g.assume)
     pc = pid_to_pc(pid)
     add_variables_to_table(t, g.locals, pid, g.assume)
     # create graph annotated with formulae
