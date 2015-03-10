@@ -378,7 +378,8 @@ class AST(object):
             # add var
             flatname = 'pid{pid}_{name}'.format(pid=pid, name=name)
             t.add_var(pid, name, flatname, dom, dtype,
-                      self.free, owner, length=self.length)
+                      self.free, owner, length=self.length,
+                      init=self.initial_value)
 
     class VarRef(ast.VarRef):
         def _context(self, d):
@@ -694,7 +695,7 @@ class VariablesTable(object):
                 for var, d in scope.iteritems())
 
     def add_var(self, pid, name, flatname, dom, dtype,
-                free, owner, length=None):
+                free, owner, length=None, init=None):
         self.scopes.setdefault(pid, dict())
         d = dict()
         d['flatname'] = flatname
@@ -703,6 +704,7 @@ class VariablesTable(object):
         d['length'] = length
         d['owner'] = owner
         d['free'] = free
+        d['init'] = init
         assert name not in self.scopes[pid], (name, pid)
         self.scopes[pid][name] = d
 
@@ -716,7 +718,7 @@ class VariablesTable(object):
             'lid': lid,
             'assume': assume}
 
-    def add_program_counter(self, pid, n, owner):
+    def add_program_counter(self, pid, n, owner, init):
         pc = pid_to_pc(pid)
         dom = (0, n - 1)
         assert pc not in self.scopes['aux']
@@ -724,7 +726,8 @@ class VariablesTable(object):
             raise ValueError('unknown proctype owner: {owner}'.format(
                              owner=owner))
         self.add_var(pid='aux', name=pc, flatname=pc,
-                     dom=dom, dtype='saturating', free=True, owner=owner)
+                     dom=dom, dtype='saturating',
+                     free=True, owner=owner, init=init)
 
     def to_grspec(self):
         env_vars = {s: copy.copy(d['dom'])
@@ -737,18 +740,20 @@ class VariablesTable(object):
 
     def to_slugs(self):
         """Return variables `dict` for `pyggyback.promela.slugs`."""
-        var, env_safe = self._to_slugs(self.env, 'env')
-        svar, sys_safe = self._to_slugs(self.sys, 'sys')
+        var, env_init, env_safe = self._to_slugs(self.env, 'env')
+        svar, sys_init, sys_safe = self._to_slugs(self.sys, 'sys')
         var.update(svar)
-        return var, env_safe, sys_safe
+        return var, env_init, sys_init, env_safe, sys_safe
 
     def _to_slugs(self, vardefs, owner):
         logger.info(
             '++ convert {owner} vars to slugs'.format(owner=owner))
         vs = dict()
+        init = list()
         safety = list()
         for pid, name, d in vardefs:
             dom = d['dom']
+            ival = d['init']
             if dom == 'boolean':
                 b = {'type': 'bool', 'owner': owner}
             elif isinstance(dom, tuple):
@@ -760,6 +765,11 @@ class VariablesTable(object):
             flatnames = array_to_flatnames(d['flatname'], d['length'])
             for x in flatnames:
                 vs[x] = dict(b)
+            # initial value
+            # imperative var or free var assigned at decl ?
+            if ival is not None:
+                c = init_to_logic(d)
+                init.extend(c)
             # lower bound safety constraints
             if not isinstance(dom, tuple):
                 continue
@@ -775,7 +785,25 @@ class VariablesTable(object):
                 for x in flatnames])
         logger.debug('result vars:\n {v}'.format(v=vs))
         logger.info('-- done converting vars to slugs\n')
-        return vs, _conj(safety)
+        return vs, _conj(init), _conj(safety)
+
+
+def init_to_logic(d):
+    """Return logic formulae for initial condition."""
+    # it is correct to lookup in pid because these are local defs
+    if d['dom'] == 'boolean':
+        op = '<->'
+    else:
+        op = '='
+    # handle arrays
+    c = list()
+    for name in array_to_flatnames(d['flatname'], d['length']):
+        s = '{flatname} {op} {value}'.format(
+            op=op,
+            flatname=name,
+            value=d['init'])
+        c.append(s)
+    return c
 
 
 def dom_to_width(dom):
@@ -810,6 +838,7 @@ def array_to_flatnames(flatname, length):
     if length is None:
         return [flatname]
     # array
+    assert length > 0, length
     # one variable per array element
     return ['{flatname}{i}'.format(flatname=flatname, i=i)
             for i in xrange(length)]
@@ -817,7 +846,6 @@ def array_to_flatnames(flatname, length):
 
 def products_to_logic(products, global_defs):
     max_key = 0
-    init = dict()
     trans = dict()
     progress = dict()
     var2edges = dict()
@@ -853,7 +881,6 @@ def products_to_logic(products, global_defs):
             # TODO: collect group var decls
         else:
             raise TypeError('group of type "{t}"'.format(t=type(p)))
-        init.update(i)
         trans.update(tr)
         progress.update(prog)
         var2edges.update(v2e)
@@ -898,8 +925,8 @@ def products_to_logic(products, global_defs):
                 var = key_str(assume, owner, i)
                 dom = (0, max_key)
                 t.add_var(pid='global', name=var, flatname=var,
-                          dom=dom, dtype='saturating', free=True, owner=owner)
-                init_keys[owner].append('{var} = 0'.format(var=var))
+                          dom=dom, dtype='saturating', free=True,
+                          owner=owner, init=0)
     # assemble spec
     env_imp = constrain_imperative_vars(var2edges, t, 'env')
     sys_imp = constrain_imperative_vars(var2edges, t, 'sys')
@@ -908,16 +935,8 @@ def products_to_logic(products, global_defs):
     sys_safe = [sys_imp, sys_decl]
     for player in {'env', 'sys'}:
         ei, si, e, s = add_process_scheduler(t, trans, notexe, pcmust, player)
-        init_keys['env'].append(ei)
-        init_keys['sys'].append(si)
         env_safe.append(e)
         sys_safe.append(s)
-    env_init = _conj(
-        [_conj(x['env']) for x in init.itervalues()] +
-        init_keys['env'])
-    sys_init = _conj(
-        [_conj(x['sys']) for x in init.itervalues()] +
-        init_keys['sys'])
     env_safe = _conj(env_safe)
     sys_safe = _conj(sys_safe)
     env_prog = [y for x in progress.itervalues()
@@ -931,7 +950,6 @@ def products_to_logic(products, global_defs):
 
 def proctypes_to_logic(gid, proctypes, t, max_gid, max_active=None):
     max_key = 0
-    init = dict()
     trans = dict()
     progress = dict()
     var2edges = dict()
@@ -941,7 +959,6 @@ def proctypes_to_logic(gid, proctypes, t, max_gid, max_active=None):
     for lid, p in enumerate(proctypes):
         i, tr, prog, v2e, nexe, pm, mk = proctype_to_logic(
             gid, lid, p, t, max_gid, max_active)
-        init.update(i)
         trans.update(tr)
         progress.update(prog)
         var2edges.update(v2e)
@@ -973,7 +990,6 @@ def proctype_to_logic(gid, lid, p, t, max_gid, max_active=None):
     g.assume = p.assume
     max_key = max_edge_multiplicity(g)
     # instantiate each instance
-    init = dict()
     trans = dict()
     progress = dict()
     var2edges = dict()
@@ -1011,15 +1027,14 @@ def process_to_logic(gid, lid, g, t, max_gid):
     pid = len(t.pids)
     t.add_pid(pid, g.name, g.owner, gid, lid, assume=g.assume)
     pc = pid_to_pc(pid)
-    init = add_variables_to_table(t, g.locals, pid, g.assume)
-    init[g.owner].append('({pc} = {root})'.format(pc=pc, root=g.root))
+    add_variables_to_table(t, g.locals, pid, g.assume)
     # create graph annotated with formulae
     h = nx.MultiDiGraph()
     var2edges = add_edge_formulae(h, g, t, pid)
     trans = graph_to_logic(h, t, pid, max_gid)
     notexe = form_notexe_condition(g, t, pid)
     progress = collect_progress_labels(g, t, pid)
-    t.add_program_counter(pid, len(h), g.owner)
+    t.add_program_counter(pid, len(h), g.owner, g.root)
     if g.assume == 'sys' and g.owner == 'env':
         pcmust = graph_to_guards(g, t, pid)
     else:
@@ -1032,34 +1047,13 @@ def process_to_logic(gid, lid, g, t, max_gid):
 def add_variables_to_table(t, r, pid, assume_context):
     """Return logic formula equivalent to program graph.
 
-    @type t: VariablesTable
+    @type t: `VariablesTable`
     @type r: iterable of `VarDef`
     @param assume_context: default owner
-
-    @rtype: `dict` of `list`
     """
-    init = {'env': list(), 'sys': list()}
     for x in r:
         assert isinstance(x, ast.VarDef), x
         x.insert_logic_var(t, assume_context, pid)
-        # free var decl w/o assignment ?
-        if x.initial_value is None:
-            continue
-        # it is correct to lookup in pid because these are local defs
-        d = t.scopes[pid][x.name]
-        x_owner = d['owner']
-        if d['dom'] == 'boolean':
-            op = '<->'
-        else:
-            op = '='
-        # handle arrays
-        for name in array_to_flatnames(d['flatname'], d['length']):
-            s = '{flatname} {op} {value}'.format(
-                op=op,
-                flatname=name,
-                value=x.initial_value)
-            init[x_owner].append(s)
-    return init
 
 
 def add_edge_formulae(h, g, t, pid):
@@ -1626,7 +1620,7 @@ def add_process_scheduler(t, trans, notexe, pcmust, player):
                 ex=ex, gid=gid, nexe=blocks_if, ps=ps))
     # player has no processes ?
     if not gids:
-        return ('', '', '', '')
+        return ('', '')
     # assert contiguous gids
     max_gid = len(gids)
     assert gids == set(xrange(max_gid)), gids
@@ -1638,16 +1632,14 @@ def add_process_scheduler(t, trans, notexe, pcmust, player):
     ex = 'ex_{player}'.format(player=player)
     ex_dom = ps_dom
     t.add_var(pid='aux', name=ex, flatname=ex,
-              dom=ex_dom, dtype='saturating', free=True, owner=player)
-    init[player].append('({ex} = {max_gid})'.format(
-        ex=ex,
-        max_gid=max_gid))
+              dom=ex_dom, dtype='saturating', free=True, owner=player,
+              init=max_gid)
     # define preemption variables for atomic execution
     # that stops also the other player
     pm = pm_str(player)
     t.add_var(pid='aux', name=pm, flatname=pm,
-              dom='boolean', dtype='saturating', free=True, owner=player)
-    init[player].append('(! {pm})'.format(pm=pm))
+              dom='boolean', dtype='saturating', free=True, owner=player,
+              init='false')
     # last value means deadlock
     if max_gid:
         if player == 'sys':
@@ -1686,8 +1678,6 @@ def add_process_scheduler(t, trans, notexe, pcmust, player):
                 ps=ps, max_gid=max_gid))
     logger.info('done with process scheduler.\n')
     return (
-        _conj(init['env']),
-        _conj(init['sys']),
         _conj(safety['env'], sep=2*'\n'),
         _conj(safety['sys'], sep=2*'\n'))
 
@@ -1839,11 +1829,12 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     parser = Parser()
     program = parser.parse(code)
     global_defs, products, ltl = program.to_table()
-    (vartable, env_init, sys_init, env_safe,
-     sys_safe, env_prog, sys_prog, max_gid) = \
+    (vartable, env_safe,
+     sys_safe, env_prog, sys_prog, max_gids) = \
         products_to_logic(products, global_defs)
     ltl_spc = transform_ltl_blocks(ltl, vartable)
-    vartypes, env_lim_safe, sys_lim_safe = vartable.to_slugs()
+    vartypes, env_init, sys_init, \
+        env_lim_safe, sys_lim_safe = vartable.to_slugs()
     # conjoin with ltl blocks
     env_init = _conj([env_init, ltl_spc['assume']['init']])
     env_safe = _conj([env_safe, ltl_spc['assume']['G'], env_lim_safe])
@@ -1856,7 +1847,7 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     safe_ltl = ltl_spc['assert']['G']
     if strict_atomic and 'ex_sys' in vartable.scopes['aux']:
         safe_ltl = '((ex_sys < {max_gid}) | {safe})'.format(
-            max_gid=max_gid['sys'], safe=safe_ltl)
+            max_gid=max_gids['sys'], safe=safe_ltl)
     sys_safe = _conj([sys_safe, safe_ltl, sys_lim_safe])
     sys_prog = sys_prog + ltl_spc['assert']['GF']
     sys_prog = [x for x in sys_prog if x != 'True']
