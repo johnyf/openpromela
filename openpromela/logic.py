@@ -1630,21 +1630,6 @@ def add_process_scheduler(t, trans, notexe, pcmust, player):
     # assert contiguous gids
     max_gid = len(gids)
     assert gids == set(xrange(max_gid)), gids
-    # last value means deadlock
-    if max_gid:
-        if player == 'sys':
-            safety[player].append((
-                '\n\n# never deadlock:\n'
-                '(X {ps} != {max_gid})\n').format(ps=ps, max_gid=max_gid))
-        elif player == 'env':
-            other_player = 'sys'
-            pm_env = pm_str(other_player)
-            safety[player].append((
-                '\n\n# never deadlock, unless preempted by sys:\n'
-                '((X {ps} = {max_gid}) <-> {pm})\n').format(
-                    ps=ps, max_gid=max_gid, pm=pm_env))
-        else:
-            raise Exception('Unknown player "{player}"'.format(player=player))
     # define ps variable
     ps_dom = (0, max_gid)
     t.add_var(pid='global', name=ps, flatname=ps,
@@ -1663,6 +1648,21 @@ def add_process_scheduler(t, trans, notexe, pcmust, player):
     t.add_var(pid='aux', name=pm, flatname=pm,
               dom='boolean', dtype='saturating', free=True, owner=player)
     init[player].append('(! {pm})'.format(pm=pm))
+    # last value means deadlock
+    if max_gid:
+        if player == 'sys':
+            safety[player].append((
+                '\n\n# never deadlock:\n'
+                '(X {ps} != {max_gid})\n').format(ps=ps, max_gid=max_gid))
+        elif player == 'env':
+            other_player = 'sys'
+            pm_env = pm_str(other_player)
+            safety[player].append((
+                '\n\n# never deadlock, unless preempted by sys:\n'
+                '((X {ps} = {max_gid}) <-> {pm})\n').format(
+                    ps=ps, max_gid=max_gid, pm=pm_env))
+        else:
+            raise Exception('Unknown player "{player}"'.format(player=player))
     # if all processes block, signal deadlock
     # a False means that some process is always executable
     assert deadlock, deadlock
