@@ -239,13 +239,51 @@ def test_executability():
     }
     '''
     assert logic.synthesize(c) is None
+    # guard of: `x || y' = true`
+    # but init to false, and is imperative var
     c = '''
     free env bool x;
 
     assert active sys proctype main(){
         bool y;
         do
+        :: x || y /* true */
+        od
+    }
+    '''
+    assert logic.synthesize(c) is None
+    # y is primed, so deconstrained
+    c = '''
+    free env bool x;
+
+    assert active sys proctype main(){
+        free bool y;
+        do
         :: x || y' /* true */
+        od
+    }
+    '''
+    assert logic.synthesize(c) is not None
+    # y is free, but initially `false`
+    c = '''
+    free env bool x;
+
+    assert active sys proctype main(){
+        free bool y = false;
+        do
+        :: x || y /* true */
+        od
+    }
+    '''
+    assert logic.synthesize(c) is None
+    # y is free
+    c = '''
+    free env bool x;
+
+    assert active sys proctype main(){
+        free bool y;
+        do
+        :: x || y /* true */
         od
     }
     '''
