@@ -11,6 +11,11 @@ A synthesizer from open Promela specifications. It:
 - calls the `slugs` synthesizer to check if the resulting formula is realizable and construct a transducer realizing a winning strategy
 - return the winning strategy as a Mealy machine
 
+The language and implementation are documented in:
+
+Filippidis I., Murray R.M., Holzmann G.J.;
+[Synthesis from multi-paradigm specifications](http://resolver.caltech.edu/CaltechCDSTR:2015.003), California Institute of Technology, Pasadena, CA, 2015 (CDSTR:2015.003)
+
 
 Installation
 ============
