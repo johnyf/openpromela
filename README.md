@@ -1,6 +1,7 @@
 [![Build Status][build_img]][travis]
 [![Coverage Status][coverage]][coveralls]
 
+
 About
 =====
 
@@ -37,7 +38,8 @@ License
 =======
 [BSD-3](http://opensource.org/licenses/BSD-3-Clause), see `LICENSE` file.
 
-[build_img]: https://travis-ci.org/johnyf/openpromela.svg?branch=travis
+
+[build_img]: https://travis-ci.org/johnyf/openpromela.svg?branch=master
 [travis]: https://travis-ci.org/johnyf/openpromela
-[coverage]: https://coveralls.io/repos/johnyf/openpromela/badge.svg?branch=travis
-[coveralls]: https://coveralls.io/r/johnyf/openpromela?branch=travis
+[coverage]: https://coveralls.io/repos/johnyf/openpromela/badge.svg?branch=master
+[coveralls]: https://coveralls.io/r/johnyf/openpromela?branch=master
