@@ -49,30 +49,7 @@ def synthesize(spec, t, symbolic=True, bddfile=None, real=True):
     @rtype: `networkx.DiGraph`
     """
     logger.info('++ compile LTL to slugsin\n')
-    assert isinstance(spec, GRSpec)
-    spec.check_syntax()
-    # populate Boolean vars from table
-    add_bitnames(t)
-    ds = dict()
-    ds['env_vars'] = dict()
-    ds['sys_vars'] = dict()
-    for var, d in t.iteritems():
-        assert d['owner'] in {'env', 'sys'}
-        if d['type'] == 'int':
-            c = d['bitnames']
-        else:
-            c = [var]
-        whose = '{owner}_vars'.format(owner=d['owner'])
-        ds[whose].update({v: 'boolean' for v in c})
-    logger.debug('slugs variables:\n{v}'.format(v=pprint.pformat(ds)))
-    # add GR(1) clauses
-    parser = Parser()
-    for p in spec._parts:
-        c = list()
-        for x in getattr(spec, p):
-            tree = parser.parse(x)
-            c.append(tree.flatten(t=t))
-        ds[p] = c
+    ds = spec_to_bits(spec, t)
     s = _to_slugs(ds)
     # dump for use in manual debugging
     if logger.getEffectiveLevel() < logging.DEBUG:
@@ -128,6 +105,58 @@ def synthesize(spec, t, symbolic=True, bddfile=None, real=True):
     mealy = synth.strategy2mealy(h, spec)
     logger.info('-- done compiling to slugs')
     return mealy
+
+
+def spec_to_bits(spec, t):
+    """Bitblast `GRSpec` and return `dict` with new attributes.
+
+    @type spec: `GRSpec`
+    @param t: table of variables
+    @type t: `dict`
+    """
+    assert isinstance(spec, GRSpec)
+    spec.check_syntax()
+    add_bitnames(t)
+    # populate Boolean vars from table
+    add_bitnames(t)
+    ds = dict()
+    ds['env_vars'] = dict()
+    ds['sys_vars'] = dict()
+    for var, d in t.iteritems():
+        assert d['owner'] in {'env', 'sys'}
+        if d['type'] == 'int':
+            c = d['bitnames']
+        else:
+            c = [var]
+        whose = '{owner}_vars'.format(owner=d['owner'])
+        ds[whose].update({v: 'boolean' for v in c})
+    logger.debug('slugs variables:\n{v}'.format(v=pprint.pformat(ds)))
+    # add GR(1) clauses
+    parser = Parser()
+    for attr in {'env_init', 'sys_init', 'env_safety', 'sys_safety'}:
+        a = getattr(spec, attr)
+        if not a:
+            ds[attr] = list()
+            continue
+        s = ' & '.join('(' + x + ')' for x in a)
+        print(s)
+        tree = parser.parse(s)
+        ds[attr] = [tree.flatten(t=t)]
+    c = list()
+    for x in spec.env_prog:
+        tree = parser.parse(x)
+        c.append(tree.flatten(t=t))
+    ds['env_prog'] = c
+    c = list()
+    for x in spec.sys_prog:
+        tree = parser.parse(x)
+        c.append(tree.flatten(t=t))
+    ds['sys_prog'] = c
+    # conjunction is infix in `_to_slugs`, so won't work
+    # for prefix formulae in the lists
+    assert len(ds['env_safety']) <= 1
+    assert len(ds['sys_safety']) <= 1
+    return ds
 
 
 def add_bitnames(t):
