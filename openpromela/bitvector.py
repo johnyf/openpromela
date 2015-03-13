@@ -781,7 +781,7 @@ class SlugsLexer(object):
         self.lexer = ply.lex.lex(module=self, debug=True, debuglog=log)
 
     def t_error(self, t):
-        raise 'Illegal character "{t}"'.format(t=t.value[0])
+        raise Exception('Illegal character "{t}"'.format(t=t.value[0]))
 
 
 class PrefixParser(object):
