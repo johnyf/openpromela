@@ -1811,20 +1811,25 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     vartypes, env_init, sys_init, \
         env_lim_safe, sys_lim_safe = vartable.to_slugs()
     # conjoin with ltl blocks
-    env_init = _conj([env_init, ltl_spc['assume']['init']])
-    env_safe = _conj([env_safe, ltl_spc['assume']['G'], env_lim_safe])
-    env_prog = env_prog + ltl_spc['assume']['GF']
+    env_ltl_init = ltl_spc['assume']['init']
+    env_ltl_safe = ltl_spc['assume']['G']
+    env_ltl_prog = ltl_spc['assume']['GF']
+    sys_ltl_init = ltl_spc['assert']['init']
+    sys_ltl_safe = ltl_spc['assert']['G']
+    sys_ltl_prog = ltl_spc['assert']['GF']
+    env_init = _conj([env_init, env_ltl_init])
+    env_safe = _conj([env_safe, env_ltl_safe, env_lim_safe])
+    env_prog = env_prog + env_ltl_prog
     env_prog = [x for x in env_prog if x != 'True']
     if not env_prog:
         env_prog = list()
-    sys_init = _conj([sys_init, ltl_spc['assert']['init']])
     # deactivate LTL safety during atomic transitions ?
-    safe_ltl = ltl_spc['assert']['G']
     if strict_atomic and 'ex_sys' in vartable.scopes['aux']:
         safe_ltl = '((ex_sys < {max_gid}) | {safe})'.format(
             max_gid=max_gids['sys'], safe=safe_ltl)
-    sys_safe = _conj([sys_safe, safe_ltl, sys_lim_safe])
-    sys_prog = sys_prog + ltl_spc['assert']['GF']
+    sys_init = _conj([sys_init, sys_ltl_init])
+    sys_safe = _conj([sys_safe, sys_ltl_safe, sys_lim_safe])
+    sys_prog = sys_prog + sys_ltl_prog
     sys_prog = [x for x in sys_prog if x != 'True']
     if not sys_prog:
         sys_prog = list()
