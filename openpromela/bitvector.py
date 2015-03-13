@@ -763,7 +763,7 @@ class SlugsLexer(object):
     identifiers = ['NAME', 'NUMBER']
 
     t_NUMBER = r'\d+'
-    t_NAME = r'[A-Za-z_][A-Za-z0-9_]*'
+    t_NAME = r"[A-Za-z_][A-Za-z0-9_']*"
     t_NOT = r'\!'
     t_AND = r'\&'
     t_OR = r'\|'
