@@ -28,7 +28,7 @@ import networkx as nx
 import ply.lex
 import ply.yacc
 import psutil
-from tulip.spec import lexyacc, GRSpec
+from tulip.spec import ast, lexyacc, GRSpec
 from tulip.spec.translation import make_gr1c_nodes, _to_slugs
 from tulip import synth
 
@@ -785,41 +785,114 @@ class SlugsLexer(object):
 
 
 class PrefixParser(object):
-    def __init__(self):
+    """Parser for prefix syntax with buffers."""
+    # Context-sensitive grammar, so cannot use PLY
+
+    def __init__(self, nodes=None):
         self.lexer = SlugsLexer()
         self.tokens = self.lexer.tokens
+        self._binary = {'AND', 'OR', 'XOR'}
+        if nodes is None:
+            nodes = _make_memory_nodes()
+        self._ast = nodes
 
     def parse(self, data):
         self.lexer.lexer.input(data)
-        return self._recurse()
+        r = self._recurse()
+        # empty stack ?
+        tok = self.lexer.lexer.token()
+        if not tok:
+            return r
+        # error
+        s = tok.value
+        while True:
+            tok = self.lexer.lexer.token()
+            if not tok:
+                break
+            s += tok.value
+        raise Exception(
+            'syntax error: remaining characters: {s}'.format(
+                s=s))
 
-    def _recurse(self, indent=0):
-        indent += 1
+    def _recurse(self):
         tok = self.lexer.lexer.token()
         if not tok:
             raise Exception('syntax error: stream ended early')
         t = tok.type
         if t == 'NOT':
-            return '(! {x})'.format(x=self._recurse(indent))
-        elif t in {'AND', 'OR', 'XOR'}:
-            return '({x} {op} {y})'.format(
-                op=tok.value,
-                x=self._recurse(indent),
-                y=self._recurse(indent))
+            x = self._recurse()
+            return self._ast.Operator('!', x)
+        elif t in self._binary:
+            op = tok.value
+            x = self._recurse()
+            y = self._recurse()
+            return self._ast.Operator(op, x, y)
         elif t == 'DOLLAR':
-            n = int(self._recurse(indent))
-            mem = [self._recurse(indent) for i in xrange(n)]
-            sep = ',\n{s}'.format(s=' ' * indent)
-            return '\n{s}buffer[{i}](\n{s1}{mem})'.format(
-                i=n,
-                mem=sep.join(mem),
-                s=' ' * (indent - 1), s1=' ' * indent)
+            u = self._recurse()
+            assert u.type == 'num', u.type
+            n = int(u.value)
+            mem = [self._recurse() for i in xrange(n)]
+            return self._ast.Buffer(mem)
         elif t == 'QUESTION':
-            return 'reg[{i}]'.format(i=self._recurse(indent))
-        elif t in {'NAME', 'NUMBER'}:
-            return tok.value
+            u = self._recurse()
+            assert u.type == 'num', u.type
+            return self._ast.Register(u.value)
+        elif t == 'NAME':
+            return self._ast.Var(tok.value)
+        elif t == 'NUMBER':
+            return self._ast.Num(tok.value)
         else:
             raise Exception('Unknown token "{t}"'.format(t=tok))
+
+
+def _make_memory_nodes():
+    nodes = ast.make_fol_nodes()
+
+    # difference with slugs parser:
+    # cyclic references are possible, but assumed absent
+    # any cyclic reference would introduce infinite recursion,
+    # so a new variable
+    class Buffer(object):
+        def __init__(self, memory):
+            self.memory = memory
+            self.type = 'buffer'
+
+        def __repr__(self):
+            return 'Memory({c})'.format(
+                c=', '.join(repr(u) for u in self.memory))
+
+        def flatten(self, indent=0, *arg, **kw):
+            indent += 1
+            sep = ',\n{s}'.format(s=' ' * indent)
+            mem = sep.join(
+                u.flatten(indent=indent)
+                for u in self.memory)
+            return '\n{s}buffer[{i}](\n{s1}{mem})'.format(
+                i=len(self.memory),
+                mem=mem,
+                s=' ' * (indent - 1),
+                s1=' ' * indent)
+
+    class Register(nodes.Terminal):
+        def __init__(self, value):
+            super(Register, self).__init__(value)
+            self.type = 'register'
+
+        def flatten(self, *arg, **kw):
+            return 'reg[{i}]'.format(i=self.value)
+
+    # infix Binary flattening
+    class Operator(nodes.Operator):
+        def flatten(self, *arg, **kw):
+            if len(self.operands) == 2:
+                return nodes.Binary.flatten(self)
+            else:
+                return super(Operator, self).flatten()
+
+    nodes.Buffer = Buffer
+    nodes.Register = Register
+    nodes.Operator = Operator
+    return nodes
 
 
 def _call_slugs(filename, symbolic=True, bddfile=None, real=True):

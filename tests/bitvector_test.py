@@ -248,5 +248,79 @@ def test_ite():
         bv.ite_function('x', ['y0'], ['z0', 'z1', 'z2'], list())
 
 
+def test_prefix_parser():
+    parser = bv.PrefixParser()
+    nodes = parser._ast
+    # &, !
+    e = '& x ! y'
+    t = parser.parse(e)
+    assert isinstance(t, nodes.Operator), t
+    assert t.operator == '&', t.operator
+    assert len(t.operands) == 2, t.operands
+    a, b = t.operands
+    assert isinstance(a, nodes.Var), a
+    assert a.value == 'x', a.value
+    assert isinstance(b, nodes.Operator), b
+    assert b.operator == '!', b.operator
+    assert len(b.operands) == 1, b.operands
+    (y,) = b.operands
+    assert isinstance(y, nodes.Var), y
+    assert y.value == 'y', y
+    # memory buffer: $
+    e = '&   $ 1 ! x  y'
+    t = parser.parse(e)
+    # &
+    assert isinstance(t, nodes.Operator)
+    assert t.operator == '&', t.operator
+    assert len(t.operands) == 2, t.operands
+    a, b = t.operands
+    assert isinstance(a, nodes.Buffer), a
+    assert len(a.memory) == 1, a.memory
+    # ! x
+    (notx,) = a.memory
+    assert isinstance(notx, nodes.Operator), notx
+    assert len(notx.operands) == 1, notx.operands
+    # x
+    (x,) = notx.operands
+    assert isinstance(x, nodes.Var), x
+    assert x.value == 'x', x.value
+    # y
+    assert isinstance(b, nodes.Var), b
+    assert b.value == 'y', b.value
+    # register: ?
+    e = '$ 2   x    & y  ? 0'
+    t = parser.parse(e)
+    assert isinstance(t, nodes.Buffer), t
+    assert len(t.memory) == 2, t.memory
+    x, c = t.memory
+    # x
+    assert isinstance(x, nodes.Var), x
+    assert x.value == 'x', x.value
+    # &
+    assert isinstance(c, nodes.Operator), c
+    assert c.operator == '&', c.operator
+    assert len(c.operands) == 2, c.operands
+    y, reg = c.operands
+    assert isinstance(y, nodes.Var), y
+    assert y.value == 'y', y.value
+    assert isinstance(reg, nodes.Register), reg
+    assert reg.value == '0', reg.value
+
+
+def test_flatten_memory_nodes():
+    # buffer
+    nodes = bv._make_memory_nodes()
+    x = nodes.Var('x')
+    mem = [x, x, x]
+    b = nodes.Buffer(mem)
+    assert b.memory is mem, b.memory
+    f = b.flatten()
+    assert f == '\nbuffer[3](\n x,\n x,\n x)', f
+    # register
+    reg = nodes.Register('1')
+    f = reg.flatten()
+    assert f == 'reg[1]', f
+
+
 if __name__ == '__main__':
     test_ite()
