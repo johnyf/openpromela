@@ -1583,7 +1583,7 @@ def add_process_scheduler(t, pids, player):
     # that stops also the other player
     pm = pm_str(player)
     t.add_var(pid='aux', name=pm, flatname=pm,
-              dom='boolean', dtype='saturating', free=True, owner=player,
+              dom='boolean', dtype='boolean', free=True, owner=player,
               init='false')
     # last value means deadlock
     if max_gid:
