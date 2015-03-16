@@ -682,11 +682,10 @@ class VariablesTable(object):
             for var, d in localvars.iteritems()
             if d['owner'] == owner]
 
-    @property
-    def variables(self):
-        return ((pid, var, d)
-                for pid, scope in self.scopes.iteritems()
-                for var, d in scope.iteritems())
+    def variables_iter(self):
+        for pid, localvars in self.scopes.iteritems():
+            for var, d in localvars.iteritems():
+                yield (pid, var, d)
 
     def add_var(self, pid, name, flatname, dom, dtype,
                 free, owner, length=None, init=None):
