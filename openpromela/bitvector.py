@@ -75,21 +75,12 @@ def synthesize(spec, symbolic=True, bddfile=None, real=True):
         return realizable
     if not realizable:
         return None
-    dout = json.loads(out)
+    g = load_strategy(out)
     # collect int vars
     vrs = dict(spec.sys_vars)
     vrs.update(spec.env_vars)
     vrs = {k: dom for k, dom in vrs.iteritems()
            if isinstance(dom, tuple) and len(dom) == 2}
-    # use nx graph to represent strategy
-    g = nx.DiGraph()
-    dvars = dout['variables']
-    for stru, d in dout['nodes'].iteritems():
-        u = int(stru)
-        state = dict(zip(dvars, d['state']))
-        g.add_node(u, state=state)
-        for v in d['trans']:
-            g.add_edge(u, v)
     # TODO: convert values from signed or unsigned representations
     logger.debug(
         ('loaded strategy with vertices:\n  {v}\n'
@@ -99,6 +90,21 @@ def synthesize(spec, symbolic=True, bddfile=None, real=True):
     h = bitfield_to_int_states(g, t)
     mealy = synth.strategy2mealy(h, spec)
     return mealy
+
+
+def load_strategy(filename):
+    """Return `networkx.DiGraph` for strategy in JSON file."""
+    dout = json.loads(filename)
+    # use nx graph to represent strategy
+    g = nx.DiGraph()
+    dvars = dout['variables']
+    for stru, d in dout['nodes'].iteritems():
+        u = int(stru)
+        state = dict(zip(dvars, d['state']))
+        g.add_node(u, state=state)
+        for v in d['trans']:
+            g.add_edge(u, v)
+    return g
 
 
 def spec_to_bits(spec):

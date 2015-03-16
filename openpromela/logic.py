@@ -1753,8 +1753,15 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
 
 def dump_ltl_to_json(spc):
     f = lambda x: _conj(x).split('\n')
+    dvars = dict()
+    for var, d in spc.vars.iteritems():
+        b = dict(d)
+        init = b.get('init')
+        if init is not None:
+            b['init'] = str(init)
+        dvars[var] = b
     d = {
-        'vars': spc.vars,
+        'vars': dvars,
         'env_init': spc.env_init,
         'env_safety': f(spc.env_safety),
         'env_prog': spc.env_prog,
