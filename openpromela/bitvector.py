@@ -77,10 +77,10 @@ def synthesize(spec, symbolic=True, bddfile=None, real=True):
         return None
     g = load_strategy(out)
     # collect int vars
-    vrs = dict(spec.sys_vars)
-    vrs.update(spec.env_vars)
-    vrs = {k: dom for k, dom in vrs.iteritems()
-           if isinstance(dom, tuple) and len(dom) == 2}
+    # vrs = dict(spec.sys_vars)
+    # vrs.update(spec.env_vars)
+    # vrs = {k: dom for k, dom in vrs.iteritems()
+    #        if isinstance(dom, tuple) and len(dom) == 2}
     # TODO: convert values from signed or unsigned representations
     logger.debug(
         ('loaded strategy with vertices:\n  {v}\n'
