@@ -655,19 +655,13 @@ class VariablesTable(object):
         # struct data types not supported yet
 
     def __str__(self):
-        free = {var
-                for pid, localvars in self.scopes.iteritems()
-                for var, d in localvars.iteritems()
-                if d['free']}
         return (
             '\nTable of variables\n'
             '--------------------\n\n'
-            'environment inputs:\n {env}\n\n'
-            'system outputs:\n {sys}\n\n'
-            'free variables:\n {free}\n').format(
-                env=pprint.pformat(self.env),
-                sys=pprint.pformat(self.sys),
-                free=free)
+            '{scopes}\n\n'
+            '{pids}\n\n').format(
+                scopes=pprint.pformat(self.scopes),
+                pids=pprint.pformat(self.pids))
 
     @property
     def env(self):
