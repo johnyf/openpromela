@@ -479,7 +479,7 @@ class AST(object):
                 d = find_var_in_scope(self.var.name, t, pid)
                 dom = d['dom']
                 dtype = d['type']
-                _, width = dom_to_width(dom)
+                _, width = bitvector.dom_to_width(dom)
                 if dtype == 'saturating':
                     value = value
                 elif dtype == 'modwrap':
@@ -1702,9 +1702,6 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
         products_to_logic(products, global_defs)
     ltl_spc = transform_ltl_blocks(ltl, vartable)
     t = vartable.flatten()
-    vartypes, env_decl_init, sys_decl_init, \
-        env_lim_safe, sys_lim_safe = bitblast_table(t)
-    env_vars, sys_vars = to_grspec(vartypes)
     # conjoin with ltl blocks
     env_ltl_init = ltl_spc['assume']['init']
     env_ltl_safe = ltl_spc['assume']['G']
@@ -1724,22 +1721,22 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
             ' (ex_sys < {max_gid})) | {safe})').format(
                 max_gid=max_gids['sys'],
                 safe=sys_ltl_safe)
-    env_init = [env_ltl_init, env_decl_init]
-    env_safe = [env_safe, env_ltl_safe, env_lim_safe]
+    env_init = [env_ltl_init]
+    env_safe = [env_safe, env_ltl_safe]
     env_prog = env_prog + env_ltl_prog
     env_prog = [x for x in env_prog if x != 'True']
     if not env_prog:
         env_prog = list()
-    sys_init = [sys_ltl_init, sys_decl_init]
-    sys_safe = [sys_safe, sys_ltl_safe, sys_lim_safe]
+    sys_init = [sys_ltl_init]
+    sys_safe = [sys_safe, sys_ltl_safe]
     sys_prog = sys_prog + sys_ltl_prog
     sys_prog = [x for x in sys_prog if x != 'True']
     if not sys_prog:
         sys_prog = list()
-    spc = spec.GRSpec(env_vars=env_vars, sys_vars=sys_vars,
-                      env_init=env_init, sys_init=sys_init,
+    spc = spec.GRSpec(env_init=env_init, sys_init=sys_init,
                       env_safety=env_safe, sys_safety=sys_safe,
                       env_prog=env_prog, sys_prog=sys_prog)
+    spc.vars = t
     # dump table and spec to file
     s = (
         '{spc}\n\n'
@@ -1747,26 +1744,23 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
         'Variable types for bitblaster:\n\n'
         '{vartypes}\n').format(
             table=vartable, spc=spc.pretty(),
-            vartypes=pprint.pformat(vartypes))
+            vartypes=pprint.pformat(t))
     logger.info(s)
     if logger.getEffectiveLevel() < logging.DEBUG:
-        dump_ltl_to_json(spc, vartypes)
-    return bitvector.synthesize(spc, vartypes,
-                                symbolic=symbolic, **kw)
+        dump_ltl_to_json(spc)
+    return bitvector.synthesize(spc, symbolic=symbolic, **kw)
 
 
-def dump_ltl_to_json(spc, vartypes):
+def dump_ltl_to_json(spc):
     f = lambda x: _conj(x).split('\n')
     d = {
-        'env_vars': spc.env_vars,
+        'vars': spc.vars,
         'env_init': spc.env_init,
         'env_safety': f(spc.env_safety),
         'env_prog': spc.env_prog,
-        'sys_vars': spc.sys_vars,
         'sys_init': f(spc.sys_init),
         'sys_safety': f(spc.sys_safety),
         'sys_prog': spc.sys_prog}
-    d['vartypes'] = vartypes
     with open(LTL_SPEC, 'w') as f:
         json.dump(d, f, indent=4)
     with open(SPEC_REPR, 'w') as f:

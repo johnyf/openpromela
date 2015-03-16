@@ -39,7 +39,7 @@ SLUGS_SPEC = 'spec_slugs.txt'
 BDD_FILE = 'bdd.txt'
 
 
-def synthesize(spec, t, symbolic=True, bddfile=None, real=True):
+def synthesize(spec, symbolic=True, bddfile=None, real=True):
     """Return strategy satisfying the specification `spec`.
 
     @param spec: GR(1) specification
@@ -49,7 +49,7 @@ def synthesize(spec, t, symbolic=True, bddfile=None, real=True):
     @rtype: `networkx.DiGraph`
     """
     logger.info('++ compile LTL to slugsin\n')
-    ds = spec_to_bits(spec, t)
+    ds, t = spec_to_bits(spec)
     s = _to_slugs(ds)
     # dump for use in manual debugging
     if logger.getEffectiveLevel() < logging.DEBUG:
@@ -101,17 +101,33 @@ def synthesize(spec, t, symbolic=True, bddfile=None, real=True):
     return mealy
 
 
-def spec_to_bits(spec, t):
+def spec_to_bits(spec):
     """Bitblast `GRSpec` and return `dict` with new attributes.
 
+    The table of variables is built from `spec.vars`,
+    a `dict` that maps each variable name to a `dict` with attr:
+
+      - `"type": "boolean" or "modwrap" or "saturating"`
+      - `"owner": "env" or "sys"`
+      - `"init"`: has suitable `__str__`
+      - `"dom": (min, max)`, range of integer,
+        where `min, max: int`
+
     @type spec: `GRSpec`
-    @param t: table of variables
-    @type t: `dict`
     """
     assert isinstance(spec, GRSpec)
-    spec.check_syntax()
     # populate Boolean vars from table
+    t, env_decl_init, sys_decl_init, \
+        env_lim_safe, sys_lim_safe = bitblast_table(spec.vars)
     check_data_types(t)
+    env_vars, sys_vars = to_grspec(t)
+    spec.env_vars = env_vars
+    spec.sys_vars = sys_vars
+    spec.env_init.extend(env_decl_init)
+    spec.sys_init.extend(sys_decl_init)
+    spec.env_safety.extend(env_lim_safe)
+    spec.sys_safety.extend(sys_lim_safe)
+    spec.check_syntax()
     add_bitnames(t)
     ds = dict()
     ds['env_vars'] = dict()
@@ -146,7 +162,7 @@ def spec_to_bits(spec, t):
         tree = parser.parse(x)
         c.append(tree.flatten(t=t))
     ds['sys_prog'] = c
-    return ds
+    return ds, t
 
 
 def bitblast_table(table):
@@ -187,10 +203,10 @@ def bitblast_table(table):
         safety[owner].append(
             '({min} <= {x}) & ({x} <= {max})'.format(
                 min=dmin, max=dmax, x=var))
-    env_init = _conj(init['env'])
-    sys_init = _conj(init['sys'])
-    env_safe = _conj(safety['env'])
-    sys_safe = _conj(safety['sys'])
+    env_init = init['env']
+    sys_init = init['sys']
+    env_safe = safety['env']
+    sys_safe = safety['sys']
     logger.info('-- done bitblasting vars table\n')
     return t, env_init, sys_init, env_safe, sys_safe
 
