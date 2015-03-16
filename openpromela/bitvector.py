@@ -66,10 +66,10 @@ def synthesize(spec, symbolic=True, bddfile=None, real=True):
         fin.name, symbolic=symbolic, bddfile=bddfile, real=real)
     os.unlink(fin.name)
     logger.debug('slugs output:\n{out}'.format(out=out))
-    if not realizable:
-        logger.info('not realizable')
-    else:
+    if realizable:
         logger.info('realizable')
+    else:
+        logger.info('not realizable')
     # symbolic strategies not loaded from file yet
     if symbolic:
         return realizable
@@ -155,7 +155,6 @@ def spec_to_bits(spec):
             ds[attr] = list()
             continue
         s = ' & '.join('(' + x + ')' for x in a)
-        print(s)
         tree = parser.parse(s)
         ds[attr] = [tree.flatten(t=t)]
     c = list()
