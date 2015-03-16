@@ -724,14 +724,6 @@ class VariablesTable(object):
                      dom=dom, dtype='saturating',
                      free=True, owner=owner, init=init)
 
-    def to_grspec(self):
-        env_vars = {s: copy.copy(d['dom'])
-                    for pid, var, d in self.env
-                    for s in array_to_flatnames(d['flatname'], d['length'])}
-        sys_vars = {s: copy.copy(d['dom'])
-                    for pid, var, d in self.sys
-                    for s in array_to_flatnames(d['flatname'], d['length'])}
-        return env_vars, sys_vars
     def flatten(self):
         """Return table of variables in logic formulae.
 
@@ -1792,6 +1784,21 @@ def _invariant(flatname, dom, length=None):
     return _conj(c)
 
 
+def to_grspec(t):
+    v = {'env': dict(), 'sys': dict()}
+    for var, d in t.iteritems():
+        dtype = d['type']
+        owner = d['owner']
+        if dtype == 'bool':
+            v[owner][var] = 'boolean'
+        elif dtype == 'int':
+            v[owner][var] = d['dom']
+        else:
+            raise Exception(
+                'unknown type "{dtype}"'.format(dtype=dtype))
+    return v['env'], v['sys']
+
+
 def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     """Call GR(1) synthesis tool and return winning transducer.
 
@@ -1808,6 +1815,7 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     t = vartable.flatten()
     vartypes, env_decl_init, sys_decl_init, \
         env_lim_safe, sys_lim_safe = bitblast_table(t)
+    env_vars, sys_vars = to_grspec(vartypes)
     # conjoin with ltl blocks
     env_ltl_init = ltl_spc['assume']['init']
     env_ltl_safe = ltl_spc['assume']['G']
@@ -1839,7 +1847,6 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     sys_prog = [x for x in sys_prog if x != 'True']
     if not sys_prog:
         sys_prog = list()
-    env_vars, sys_vars = vartable.to_grspec()
     spc = spec.GRSpec(env_vars=env_vars, sys_vars=sys_vars,
                       env_init=env_init, sys_init=sys_init,
                       env_safety=env_safe, sys_safety=sys_safe,
