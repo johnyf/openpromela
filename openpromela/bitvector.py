@@ -146,10 +146,6 @@ def spec_to_bits(spec, t):
         tree = parser.parse(x)
         c.append(tree.flatten(t=t))
     ds['sys_prog'] = c
-    # conjunction is infix in `_to_slugs`, so won't work
-    # for prefix formulae in the lists
-    assert len(ds['env_safety']) <= 1
-    assert len(ds['sys_safety']) <= 1
     return ds
 
 
