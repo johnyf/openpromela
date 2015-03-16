@@ -732,73 +732,77 @@ class VariablesTable(object):
                     for pid, var, d in self.sys
                     for s in array_to_flatnames(d['flatname'], d['length'])}
         return env_vars, sys_vars
+    def flatten(self):
+        """Return table of variables in logic formulae.
 
-    def to_slugs(self):
-        """Return variables `dict` for `pyggyback.promela.slugs`."""
-        var, env_init, env_safe = self._to_slugs(self.env, 'env')
-        svar, sys_init, sys_safe = self._to_slugs(self.sys, 'sys')
-        var.update(svar)
-        return var, env_init, sys_init, env_safe, sys_safe
-
-    def _to_slugs(self, vardefs, owner):
-        logger.info(
-            '++ convert {owner} vars to slugs'.format(owner=owner))
-        vs = dict()
-        init = list()
-        safety = list()
-        for pid, name, d in vardefs:
-            dom = d['dom']
-            ival = d['init']
-            if dom == 'boolean':
-                b = {'type': 'bool', 'owner': owner}
-            elif isinstance(dom, tuple):
-                signed, width = dom_to_width(dom)
-                b = {'type': 'int', 'owner': owner,
-                     'signed': signed, 'width': width}
-            else:
-                raise Exception('dom not boolean or tuple')
+        A variable is defined for each array element.
+        """
+        logger.info('++ flatten table of variables')
+        t = dict()
+        attr = {'type', 'init', 'owner', 'dom'}
+        for _, name, d in self.variables_iter():
+            b = {k: d[k] for k in attr}
+            # flatten arrays
             flatnames = array_to_flatnames(d['flatname'], d['length'])
             for x in flatnames:
-                vs[x] = dict(b)
+                t[x] = dict(b)
+        logger.debug('result vars:\n {t}'.format(t=t))
+        return t
+
+def bitblast_table(table):
+        """Return table of variables for bitvectors."""
+        t = dict()
+        init = {'env': list(), 'sys': list()}
+        safety = {'env': list(), 'sys': list()}
+        for var, d in table.iteritems():
+            dtype = d['type']
+            ival = d['init']
+            owner = d['owner']
+            if dtype == 'boolean':
+                b = dict(type='bool', owner=owner)
+            elif dtype == 'saturating' or dtype == 'modwrap':
+                dom = d['dom']
+                assert len(dom) == 2, dom
+                signed, width = dom_to_width(dom)
+                b = dict(type='int', owner=owner,
+                         signed=signed, width=width,
+                         dom=dom)
+            else:
+                raise Exception(
+                    'unknown type: "{dtype}"'.format(dtype=dtype))
+            t[var] = b
             # initial value
             # imperative var or free var assigned at decl ?
             if ival is not None:
-                c = init_to_logic(d)
-                init.extend(c)
-            # lower bound safety constraints
-            if not isinstance(dom, tuple):
+                c = init_to_logic(var, d)
+                init[owner].append(c)
+            # ranged bitfield safety constraints
+            if dtype == 'boolean':
                 continue
             # int var
             # saturating semantics ?
-            dtype = d['type']
             if dtype != 'saturating':
                 continue
             dmin, dmax = dom
-            safety.extend([
+            safety[owner].append(
                 '({min} <= {x}) & ({x} <= {max})'.format(
-                    min=dmin, max=dmax, x=x)
-                for x in flatnames])
-        logger.debug('result vars:\n {v}'.format(v=vs))
-        logger.info('-- done converting vars to slugs\n')
-        return vs, _conj(init), _conj(safety)
+                    min=dmin, max=dmax, x=var))
+        env_init = _conj(init['env'])
+        sys_init = _conj(init['sys'])
+        env_safe = _conj(safety['env'])
+        sys_safe = _conj(safety['sys'])
+        logger.info('-- done bitblasting vars table\n')
+        return t, env_init, sys_init, env_safe, sys_safe
 
 
-def init_to_logic(d):
+def init_to_logic(var, d):
     """Return logic formulae for initial condition."""
-    # it is correct to lookup in pid because these are local defs
-    if d['dom'] == 'boolean':
+    if d['type'] == 'boolean':
         op = '<->'
     else:
         op = '='
-    # handle arrays
-    c = list()
-    for name in array_to_flatnames(d['flatname'], d['length']):
-        s = '{flatname} {op} {value}'.format(
-            op=op,
-            flatname=name,
-            value=d['init'])
-        c.append(s)
-    return c
+    return '{var} {op} {value}'.format(
+        op=op, var=var, value=d['init'])
 
 
 def dom_to_width(dom):
@@ -1801,8 +1805,9 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
      sys_safe, env_prog, sys_prog, max_gids) = \
         products_to_logic(products, global_defs)
     ltl_spc = transform_ltl_blocks(ltl, vartable)
-    vartypes, env_init, sys_init, \
-        env_lim_safe, sys_lim_safe = vartable.to_slugs()
+    t = vartable.flatten()
+    vartypes, env_decl_init, sys_decl_init, \
+        env_lim_safe, sys_lim_safe = bitblast_table(t)
     # conjoin with ltl blocks
     env_ltl_init = ltl_spc['assume']['init']
     env_ltl_safe = ltl_spc['assume']['G']
@@ -1822,14 +1827,14 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
             ' (ex_sys < {max_gid})) | {safe})').format(
                 max_gid=max_gids['sys'],
                 safe=sys_ltl_safe)
-    env_init = _conj([env_init, env_ltl_init])
-    env_safe = _conj([env_safe, env_ltl_safe, env_lim_safe])
+    env_init = [env_ltl_init, env_decl_init]
+    env_safe = [env_safe, env_ltl_safe, env_lim_safe]
     env_prog = env_prog + env_ltl_prog
     env_prog = [x for x in env_prog if x != 'True']
     if not env_prog:
         env_prog = list()
-    sys_init = _conj([sys_init, sys_ltl_init])
-    sys_safe = _conj([sys_safe, sys_ltl_safe, sys_lim_safe])
+    sys_init = [sys_ltl_init, sys_decl_init]
+    sys_safe = [sys_safe, sys_ltl_safe, sys_lim_safe]
     sys_prog = sys_prog + sys_ltl_prog
     sys_prog = [x for x in sys_prog if x != 'True']
     if not sys_prog:
