@@ -178,7 +178,6 @@ def bitblast_table(table):
     safety = {'env': list(), 'sys': list()}
     for var, d in table.iteritems():
         dtype = d['type']
-        ival = d['init']
         owner = d['owner']
         if dtype == 'boolean':
             b = dict(type='bool', owner=owner)
@@ -195,6 +194,7 @@ def bitblast_table(table):
         t[var] = b
         # initial value
         # imperative var or free var assigned at decl ?
+        ival = d.get('init')
         if ival is not None:
             c = init_to_logic(var, d)
             init[owner].append(c)
