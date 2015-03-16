@@ -45,26 +45,6 @@ def test_disj():
     assert f(['', 'a', 'b']) == '(a) | (b)'
 
 
-def test_init_to_logic():
-    # bool
-    b = logic.ast.Bool('false')
-    init = logic.ast.Expression(b)
-    d = dict(type='boolean', init=init)
-    c = logic.init_to_logic('x', d)
-    assert c == 'x <-> False', c
-    # number
-    b = logic.ast.Integer('5')
-    init = logic.ast.Expression(b)
-    d = dict(type='other', init=init)
-    c = logic.init_to_logic('y', d)
-    assert c == 'y = 5', c
-    # TODO: create equivalent test
-    # array
-    # d = dict(dom='numerical', length=3, init=init)
-    # c = logic.init_to_logic('x', d)
-    # assert c == ['x0 = 5', 'x1 = 5', 'x2 = 5'], c
-
-
 def test_trivial_unrealizable():
     """If realizable, then the assumption is False."""
     c = '''

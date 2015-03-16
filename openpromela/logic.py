@@ -722,83 +722,6 @@ class VariablesTable(object):
         logger.debug('result vars:\n {t}'.format(t=t))
         return t
 
-def bitblast_table(table):
-        """Return table of variables for bitvectors."""
-        t = dict()
-        init = {'env': list(), 'sys': list()}
-        safety = {'env': list(), 'sys': list()}
-        for var, d in table.iteritems():
-            dtype = d['type']
-            ival = d['init']
-            owner = d['owner']
-            if dtype == 'boolean':
-                b = dict(type='bool', owner=owner)
-            elif dtype == 'saturating' or dtype == 'modwrap':
-                dom = d['dom']
-                assert len(dom) == 2, dom
-                signed, width = dom_to_width(dom)
-                b = dict(type='int', owner=owner,
-                         signed=signed, width=width,
-                         dom=dom)
-            else:
-                raise Exception(
-                    'unknown type: "{dtype}"'.format(dtype=dtype))
-            t[var] = b
-            # initial value
-            # imperative var or free var assigned at decl ?
-            if ival is not None:
-                c = init_to_logic(var, d)
-                init[owner].append(c)
-            # ranged bitfield safety constraints
-            if dtype == 'boolean':
-                continue
-            # int var
-            # saturating semantics ?
-            if dtype != 'saturating':
-                continue
-            dmin, dmax = dom
-            safety[owner].append(
-                '({min} <= {x}) & ({x} <= {max})'.format(
-                    min=dmin, max=dmax, x=var))
-        env_init = _conj(init['env'])
-        sys_init = _conj(init['sys'])
-        env_safe = _conj(safety['env'])
-        sys_safe = _conj(safety['sys'])
-        logger.info('-- done bitblasting vars table\n')
-        return t, env_init, sys_init, env_safe, sys_safe
-
-
-def init_to_logic(var, d):
-    """Return logic formulae for initial condition."""
-    if d['type'] == 'boolean':
-        op = '<->'
-    else:
-        op = '='
-    return '{var} {op} {value}'.format(
-        op=op, var=var, value=d['init'])
-
-
-def dom_to_width(dom):
-    """Return whether integer variable is signed and its bit width.
-
-    @param dom: the variable's range
-    @type dom: `(MIN, MAX)` where `MIN, MAX` are integers
-    """
-    minval, maxval = dom
-    logger.debug('int in ({m}, {M})'.format(
-        m=minval, M=maxval))
-    signed = (minval < 0) or (maxval < 0)
-    absval = max(abs(minval), abs(maxval))
-    width = absval.bit_length()
-    if width == 0:
-        assert minval == maxval
-        # TODO: optimize by substituting values
-        # for variables that are constants
-        width = 1
-    if signed:
-        width = width + 1
-    return signed, width
-
 
 def array_to_flatnames(flatname, length):
     """Return `list` of flatnames for variables that are elements.
@@ -1763,21 +1686,6 @@ def _invariant(flatname, dom, length=None):
         s = '((X {var}) {op} {var})'.format(var=ei, op=op)
         c.append(s)
     return _conj(c)
-
-
-def to_grspec(t):
-    v = {'env': dict(), 'sys': dict()}
-    for var, d in t.iteritems():
-        dtype = d['type']
-        owner = d['owner']
-        if dtype == 'bool':
-            v[owner][var] = 'boolean'
-        elif dtype == 'int':
-            v[owner][var] = d['dom']
-        else:
-            raise Exception(
-                'unknown type "{dtype}"'.format(dtype=dtype))
-    return v['env'], v['sys']
 
 
 def synthesize(code, strict_atomic=True, symbolic=False, **kw):

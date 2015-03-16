@@ -248,6 +248,22 @@ def test_ite():
         bv.ite_function('x', ['y0'], ['z0', 'z1', 'z2'], list())
 
 
+def test_init_to_logic():
+    # bool
+    d = dict(type='boolean', init='False')
+    c = bv.init_to_logic('x', d)
+    assert c == 'x <-> False', c
+    # number
+    d = dict(type='other', init=5)
+    c = bv.init_to_logic('y', d)
+    assert c == 'y = 5', c
+    # TODO: create equivalent test
+    # array
+    # d = dict(dom='numerical', length=3, init=init)
+    # c = logic.init_to_logic('x', d)
+    # assert c == ['x0 = 5', 'x1 = 5', 'x2 = 5'], c
+
+
 def test_prefix_parser():
     parser = bv.PrefixParser()
     nodes = parser._ast
