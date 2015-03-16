@@ -11,7 +11,7 @@ import networkx as nx
 from networkx.utils import misc
 from promela import ast, lex, yacc
 from openpromela import bitvector, version
-from tulip import interfaces, spec
+from tulip import spec
 from tulip.spec import gr1_fragment
 
 
@@ -479,7 +479,7 @@ class AST(object):
                 d = find_var_in_scope(self.var.name, t, pid)
                 dom = d['dom']
                 dtype = d['type']
-                signed, width = dom_to_width(dom)
+                _, width = dom_to_width(dom)
                 if dtype == 'saturating':
                     value = value
                 elif dtype == 'modwrap':

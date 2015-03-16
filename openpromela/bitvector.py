@@ -61,6 +61,7 @@ def synthesize(spec, t, symbolic=True, bddfile=None, real=True):
         fin.write(s)
     logger.info('\n\n spec:\n\n {spec}'.format(
         spec=spec) + '\n\n slugs in:\n\n {s}\n'.format(s=s))
+    logger.info('-- done compiling to slugsin')
     realizable, out = _call_slugs(
         fin.name, symbolic=symbolic, bddfile=bddfile, real=real)
     os.unlink(fin.name)
@@ -96,14 +97,7 @@ def synthesize(spec, t, symbolic=True, bddfile=None, real=True):
             v='\n  '.join(str(x) for x in g.nodes(data=True)),
             e=g.edges()))
     h = bitfield_to_int_states(g, t)
-    logger.debug(
-        ('converted bitfields to integers.\n'
-         'Strategy with vertices:\n  {v}\n'
-         'and edges:\n {e}\n').format(
-            v='\n  '.join(str(x) for x in h.nodes(data=True)),
-            e=h.edges()))
     mealy = synth.strategy2mealy(h, spec)
-    logger.info('-- done compiling to slugs')
     return mealy
 
 
@@ -188,6 +182,12 @@ def bitfield_to_int_states(g, t):
     while s:
         s = {n for n in h if not h.succ.get(n)}
         h.remove_nodes_from(s)
+    logger.debug(
+        ('converted bitfields to integers.\n'
+         'Strategy with vertices:\n  {v}\n'
+         'and edges:\n {e}\n').format(
+            v='\n  '.join(str(x) for x in h.nodes(data=True)),
+            e=h.edges()))
     return h
 
 
