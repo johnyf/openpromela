@@ -157,7 +157,7 @@ def add_bitnames(t):
     # str_to_int not needed, because there
     # are no string variables in Promela
     for var, d in t.iteritems():
-        if d['type'] in {'int', 'short', 'unsigned'}:
+        if d['type'] == 'int':
             d['bitnames'] = ['{name}_{i}'.format(name=var, i=i)
                              for i in xrange(d['width'])]
 
