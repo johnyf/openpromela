@@ -403,10 +403,12 @@ def make_slugsin_nodes():
         def flatten(self, *arg, **kw):
             """Prefix flattener."""
             logger.info('flatten "{s}"'.format(s=repr(self)))
+            x = self.operands[0].flatten(*arg, **kw)
+            y = self.operands[1].flatten(*arg, **kw)
+            assert isinstance(x, basestring), x
+            assert isinstance(y, basestring), y
             return ' {op} {x} {y} '.format(
-                op=self.opmap[self.operator],
-                x=self.operands[0].flatten(*arg, **kw),
-                y=self.operands[1].flatten(*arg, **kw))
+                op=self.opmap[self.operator], x=x, y=y)
 
     class Var(nodes.Var):
         def flatten(self, prime=None, mem=None, t=None, *arg, **kw):

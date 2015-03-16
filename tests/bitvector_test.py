@@ -264,6 +264,21 @@ def test_init_to_logic():
     # assert c == ['x0 = 5', 'x1 = 5', 'x2 = 5'], c
 
 
+def test_bool_eq_number():
+    parser = bv.Parser()
+    t = dict(x=dict(type='bool', owner='env'))
+    # wrong
+    s = 'x <-> 0'
+    tree = parser.parse(s)
+    with nt.assert_raises(AssertionError):
+        tree.flatten(t=t)
+    # correct
+    s = 'x <-> false'
+    tree = parser.parse(s)
+    r = tree.flatten(t=t)
+    assert r == ' ! ^ x 0 ', r
+
+
 def test_prefix_parser():
     parser = bv.PrefixParser()
     nodes = parser._ast
