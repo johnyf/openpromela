@@ -110,7 +110,6 @@ def spec_to_bits(spec, t):
     """
     assert isinstance(spec, GRSpec)
     spec.check_syntax()
-    add_bitnames(t)
     # populate Boolean vars from table
     add_bitnames(t)
     ds = dict()
