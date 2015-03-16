@@ -289,7 +289,7 @@ def to_guard(p, assume):
     global_defs, products, ltl_blocks = program.to_table()
     (ltl,) = ltl_blocks
     f = ltl.formula
-    t = logic.VariablesTable()
+    t = logic.Table()
     logic.add_variables_to_table(
         t, global_defs, pid=0, assume_context='sys')
     guard, primed = f.to_guard(
@@ -474,7 +474,7 @@ def test_array():
     (x,), _, ltlblocks = program.to_table()
     assert x.length == 3, x.length
     # single array inserted to table
-    t = logic.VariablesTable()
+    t = logic.Table()
     x.insert_logic_var(t, assume_context='sys', pid='global')
     assert 'x' in t.scopes['global'], t
     d = t.scopes['global']['x']
@@ -487,7 +487,7 @@ def test_array():
     '''
     program = parser.parse(c)
     vardefs, _, ltlblocks = program.to_table()
-    t = logic.VariablesTable()
+    t = logic.Table()
     logic.add_variables_to_table(
         t, vardefs, pid='global', assume_context='sys')
     ltl = next(iter(ltlblocks))
@@ -516,7 +516,7 @@ def test_array():
     '''
     program = parser.parse(c)
     vardefs, groups, ltlblocks = program.to_table()
-    t = logic.VariablesTable()
+    t = logic.Table()
     logic.add_variables_to_table(
         t, vardefs, pid='global', assume_context='sys')
     ltl = next(iter(ltlblocks))
@@ -548,7 +548,7 @@ def test_array():
     '''
     program = parser.parse(c)
     vardefs, groups, ltlblocks = program.to_table()
-    t = logic.VariablesTable()
+    t = logic.Table()
     logic.add_variables_to_table(
         t, vardefs, pid='global', assume_context='sys')
     ltl = next(iter(ltlblocks))
@@ -624,7 +624,7 @@ def test_else():
     '''
     program = parser.parse(c)
     vardefs, groups, ltlblocks = program.to_table()
-    t = logic.VariablesTable()
+    t = logic.Table()
     logic.add_variables_to_table(
         t, vardefs, pid='global', assume_context='sys')
     (proc,) = groups
@@ -729,7 +729,7 @@ def scaffold():
     e = "(x == y)'"
     tree = parser.parse(e).expr
     print(repr(tree))
-    t = logic.VariablesTable()
+    t = logic.Table()
     t.add_var(pid=0, name='x', flatname='pid0_x',
               dom='boolean', free=False, owner='sys')
     t.add_var(pid=0, name='y', flatname='pid0_y',

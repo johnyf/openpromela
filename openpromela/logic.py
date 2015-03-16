@@ -619,7 +619,7 @@ class AST(object):
             return (str(self), False)
 
 
-class VariablesTable(object):
+class Table(object):
     """Table of variables for synthesis.
 
     Distinguishes between:
@@ -740,7 +740,7 @@ def array_to_flatnames(flatname, length):
 
 
 def products_to_logic(products, global_defs):
-    t = VariablesTable()
+    t = Table()
     add_variables_to_table(t, global_defs, pid='global', assume_context='sys')
     proctypes, max_gids = flatten_products(products, t)
     pids = add_processes(proctypes, max_gids, t)
