@@ -111,6 +111,7 @@ def spec_to_bits(spec, t):
     assert isinstance(spec, GRSpec)
     spec.check_syntax()
     # populate Boolean vars from table
+    check_data_types(t)
     add_bitnames(t)
     ds = dict()
     ds['env_vars'] = dict()
@@ -159,6 +160,15 @@ def add_bitnames(t):
         if d['type'] in {'int', 'short', 'unsigned'}:
             d['bitnames'] = ['{name}_{i}'.format(name=var, i=i)
                              for i in xrange(d['width'])]
+
+
+def check_data_types(t):
+    types = {'bool', 'int'}
+    for var, d in t.iteritems():
+        if d['type'] in types:
+            continue
+        raise Exception(
+            'unknown type: "{dtype}"'.format(dtype=d['type']))
 
 
 def bitfield_to_int_states(g, t):
