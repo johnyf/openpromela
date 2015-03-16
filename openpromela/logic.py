@@ -1870,21 +1870,6 @@ def dump_ltl_to_json(spc, vartypes):
     #    f.write(s)
 
 
-def synthesize_using_slugs_own_compiler(
-    vartable, env_init, sys_init, env_safe, sys_safe
-):
-    """Useful for cross-testing for correctness."""
-    env_vars, sys_vars = vartable.to_grspec()
-    spc = spec.GRSpec(env_vars=env_vars, sys_vars=sys_vars,
-                      env_init=env_init, sys_init=sys_init,
-                      env_safety=env_safe, sys_safety=sys_safe)
-    logger.info(spc.to_canon())
-    g = interfaces.slugs.synthesize(spc)
-    pprint.pprint(g.nodes(data=True))
-    pprint.pprint(g.edges(data=True))
-    return g
-
-
 def command_line_wrapper():
     """Entry point available as `ospin` script."""
     logs = {'openpromela.logic',
