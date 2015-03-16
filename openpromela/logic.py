@@ -663,25 +663,6 @@ class VariablesTable(object):
                 scopes=pprint.pformat(self.scopes),
                 pids=pprint.pformat(self.pids))
 
-    @property
-    def env(self):
-        return self._get_owned_vars('env')
-
-    @property
-    def sys(self):
-        return self._get_owned_vars('sys')
-
-    def _get_owned_vars(self, owner):
-        """Return env or sys variables.
-
-        @type owner: "env" or "sys"
-        """
-        return [
-            (pid, var, d)
-            for pid, localvars in self.scopes.iteritems()
-            for var, d in localvars.iteritems()
-            if d['owner'] == owner]
-
     def variables_iter(self):
         for pid, localvars in self.scopes.iteritems():
             for var, d in localvars.iteritems():
