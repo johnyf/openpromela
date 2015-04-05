@@ -157,3 +157,58 @@ def _make_memory_nodes():
     nodes.Register = Register
     nodes.Operator = Operator
     return nodes
+
+
+def make_bdd_nodes():
+    """Factory of AST to flatten prefix syntax to a BDD."""
+    nodes = _make_memory_nodes()
+
+    class Buffer(nodes.Buffer):
+        def flatten(self, bdd, *arg, **kw):
+            mem = list()
+            for u in self.memory:
+                s = u.flatten(bdd=bdd, mem=mem)
+                mem.append(s)
+            r = mem[-1]
+            # print 'mem: ', mem, ', res: ', r
+            return r
+
+    class Operator(nodes.Operator):
+        def flatten(self, bdd, *arg, **kw):
+            operands = [
+                u.flatten(bdd=bdd, *arg, **kw)
+                for u in self.operands]
+            u = bdd.apply(self.operator, *operands)
+            # print 'op: ', self.operator, operands, u
+            return u
+
+    class Register(nodes.Register):
+        def flatten(self, bdd, mem, *arg, **kw):
+            i = int(self.value)
+            # no circular refs
+            assert 0 <= i < len(mem), (i, mem)
+            r = mem[i]
+            # print 'reg: ', i, ', of mem: ', mem, ', contains: ', r
+            return r
+
+    class Var(nodes.Var):
+        def flatten(self, bdd, *arg, **kw):
+            u = bdd.add_ast(self)
+            # print 'add var: ', self.value, u
+            return u
+
+    class Num(nodes.Num):
+        def flatten(self, bdd, *arg, **kw):
+            # the only registers in the tree are Boolean constants
+            assert self.value in ('0', '1'), self.value
+            u = int(self.value)
+            if u == 0:
+                u = -1
+            return u
+
+    nodes.Buffer = Buffer
+    nodes.Register = Register
+    nodes.Operator = Operator
+    nodes.Var = Var
+    nodes.Num = Num
+    return nodes
