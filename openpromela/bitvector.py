@@ -125,7 +125,6 @@ def spec_to_bits(spec):
     # populate Boolean vars from table
     t, env_decl_init, sys_decl_init, \
         env_lim_safe, sys_lim_safe = bitblast_table(spec.vars)
-    check_data_types(t)
     env_vars, sys_vars = to_grspec(t)
     spec.env_vars = env_vars
     spec.sys_vars = sys_vars
@@ -134,7 +133,6 @@ def spec_to_bits(spec):
     spec.env_safety.extend(env_lim_safe)
     spec.sys_safety.extend(sys_lim_safe)
     spec.check_syntax()
-    add_bitnames(t)
     ds = dict()
     ds['env_vars'] = dict()
     ds['sys_vars'] = dict()
@@ -148,7 +146,6 @@ def spec_to_bits(spec):
         ds[whose].update({v: 'boolean' for v in c})
     logger.debug('slugs variables:\n{v}'.format(v=pprint.pformat(ds)))
     # add GR(1) clauses
-    parser = Parser()
     for attr in {'env_init', 'sys_init', 'env_safety', 'sys_safety'}:
         a = getattr(spec, attr)
         if not a:
@@ -212,6 +209,8 @@ def bitblast_table(table):
     sys_init = init['sys']
     env_safe = safety['env']
     sys_safe = safety['sys']
+    check_data_types(t)
+    add_bitnames(t)
     logger.info('-- done bitblasting vars table\n')
     return t, env_init, sys_init, env_safe, sys_safe
 
@@ -479,6 +478,9 @@ def make_slugsin_nodes():
     nodes.Comparator = Comparator
     nodes.Arithmetic = Arithmetic
     return nodes
+
+
+parser = Parser()
 
 
 def flatten_comparator(operator, x, y, mem):
