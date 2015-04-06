@@ -25,6 +25,8 @@ def build_parser_table():
 
 
 if __name__ == '__main__':
+    with open(VERSION_FILE, 'w') as f:
+        f.write(s)
     pip.main([
         'install',
         '--allow-unverified', 'promela == 0.0.1',
@@ -33,8 +35,6 @@ if __name__ == '__main__':
         'https://github.com/johnyf/tulip-control/archive/easysetup.zip',
         'psutil >= 2.2.0',
         'humanize >= 0.5.1'])
-    with open(VERSION_FILE, 'w') as f:
-        f.write(s)
     build_parser_table()
     setup(
         name='openpromela',
