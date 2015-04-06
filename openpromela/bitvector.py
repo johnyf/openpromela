@@ -27,7 +27,7 @@ import humanize
 import networkx as nx
 import psutil
 from tulip.spec import ast, lexyacc, GRSpec
-from tulip.spec.translation import make_gr1c_nodes
+from tulip.spec.ast import make_fol_nodes
 from tulip import synth
 
 
@@ -297,7 +297,7 @@ def make_slugsin_nodes():
         # 'G': '[]', 'F': '<>',
         '<': '<', '<=': '<=', '=': '=', '>=': '>=', '>': '>', '!=': '!=',
         '+': '+', '-': '-'}
-    nodes = make_gr1c_nodes(opmap)
+    nodes = make_fol_nodes(opmap)
 
     class Operator(nodes.Operator):
         def flatten(self, mem=None, *arg, **kw):
