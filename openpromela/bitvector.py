@@ -316,11 +316,9 @@ def bitfields_to_ints(bit_state, t):
         # this is an integer var
         bitnames = d['bitnames']
         bitvalues = [bit_state[b] for b in bitnames]
-        if d['signed']:
-            val = twos_complement_to_int(bitvalues)
-        else:
-            val = twos_complement_to_int(bitvalues + ['0'])
-        int_state[flatname] = val
+        if not d['signed']:
+            bitvalues.append('0')
+        int_state[flatname] = twos_complement_to_int(bitvalues)
     return int_state
 
 
