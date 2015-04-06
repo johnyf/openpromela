@@ -47,8 +47,8 @@ def synthesize(spec, symbolic=True, bddfile=None, real=True):
     @rtype: `networkx.DiGraph`
     """
     logger.info('++ compile LTL to slugsin\n')
-    ds, t = spec_to_bits(spec)
-    s = _to_slugs(ds)
+    aut = bitblast_spec(spec)
+    s = _to_slugs(aut)
     # dump for use in manual debugging
     if logger.getEffectiveLevel() < logging.DEBUG:
         with open(SLUGS_SPEC, 'w') as f:
@@ -79,8 +79,8 @@ def synthesize(spec, symbolic=True, bddfile=None, real=True):
          'and edges:\n {e}\n').format(
             v='\n  '.join(str(x) for x in g.nodes(data=True)),
             e=g.edges()))
-    h = bitfield_to_int_states(g, t)
-    mealy = synth.strategy2mealy(h, spec)
+    h = bitfield_to_int_states(g, aut.vars)
+    mealy = strategy_to_mealy(h, spec)
     return mealy
 
 
