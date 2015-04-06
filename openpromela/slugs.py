@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import datetime
 import json
 import logging
@@ -21,7 +22,7 @@ SLUGS_SPEC = 'spec_slugs.txt'
 BDD_FILE = 'bdd.txt'
 
 
-def synthesize_slugs(spec, symbolic=True, bddfile=None, real=True):
+def synthesize(spec, symbolic=True, bddfile=None, real=True):
     """Return strategy satisfying the specification `spec`.
 
     @param spec: GR(1) specification
@@ -32,7 +33,7 @@ def synthesize_slugs(spec, symbolic=True, bddfile=None, real=True):
     """
     logger.info('++ compile LTL to slugsin\n')
     aut = logic.symbolic.bitblast_spec(spec)
-    s = bitvector._to_slugs(aut)
+    s = _to_slugs(aut)
     # dump for use in manual debugging
     if logger.getEffectiveLevel() < logging.DEBUG:
         with open(SLUGS_SPEC, 'w') as f:
@@ -105,16 +106,16 @@ def _to_slugs(aut):
         'slugs variables:\n{v}'.format(v=pprint.pformat(dvars)))
     f = _slugs_str
     return (
-        _format_slugs_vars(d['env_vars'], 'INPUT') +
-        _format_slugs_vars(d['sys_vars'], 'OUTPUT') +
+        _format_slugs_vars(dvars['env'], 'INPUT') +
+        _format_slugs_vars(dvars['sys'], 'OUTPUT') +
         # env
-        f(d.init['env'], 'ENV_INIT', sep='&') +
-        f(d.action['env'], 'ENV_TRANS') +
-        f(d.win['env'], 'ENV_LIVENESS') +
+        f(aut.init['env'], 'ENV_INIT', sep='&') +
+        f(aut.action['env'], 'ENV_TRANS') +
+        f(aut.win['env'], 'ENV_LIVENESS') +
         # sys
-        f(d.init['sys'], 'SYS_INIT', sep='&') +
-        f(d.action['sys'], 'SYS_TRANS') +
-        f(d.win['sys'], 'SYS_LIVENESS'))
+        f(aut.init['sys'], 'SYS_INIT', sep='&') +
+        f(aut.action['sys'], 'SYS_TRANS') +
+        f(aut.win['sys'], 'SYS_LIVENESS'))
 
 
 def _slugs_str(r, name, sep='\n'):
@@ -194,4 +195,3 @@ def _call_slugs(filename, symbolic=True, bddfile=None, real=True):
     if not realizable:
         assert 'Specification is unrealizable' in err
     return realizable, out
-

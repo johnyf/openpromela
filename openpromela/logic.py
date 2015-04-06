@@ -9,9 +9,9 @@ import warnings
 import networkx as nx
 from networkx.utils import misc
 from promela import ast, lex, yacc
-from openpromela import bitvector, version
 from tulip import spec
 from tulip.spec import gr1_fragment
+from openpromela import bitvector, version, slugs
 
 
 logger = logging.getLogger(__name__)
@@ -1747,7 +1747,7 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     logger.info(s)
     if logger.getEffectiveLevel() < logging.DEBUG:
         dump_ltl_to_json(spc)
-    return bitvector.synthesize(spc, symbolic=symbolic, **kw)
+    return slugs.synthesize(spc, symbolic=symbolic, **kw)
 
 
 def dump_ltl_to_json(spc):
