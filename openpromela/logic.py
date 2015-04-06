@@ -9,9 +9,9 @@ import warnings
 import networkx as nx
 from networkx.utils import misc
 from promela import ast, lex, yacc
-from tulip import spec
 from tulip.spec import gr1_fragment
 from openpromela import bitvector, version, slugs
+import logic.symbolic
 
 
 logger = logging.getLogger(__name__)
@@ -1732,9 +1732,13 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     sys_prog = [x for x in sys_prog if x != 'True']
     if not sys_prog:
         sys_prog = list()
-    spc = spec.GRSpec(env_init=env_init, sys_init=sys_init,
-                      env_safety=env_safe, sys_safety=sys_safe,
-                      env_prog=env_prog, sys_prog=sys_prog)
+    spc = logic.symbolic.Automaton()
+    spc.init['env'] = env_init
+    spc.init['sys'] = sys_init
+    spc.action['env'] = env_safe
+    spc.action['sys'] = sys_safe
+    spc.win['env'] = env_prog
+    spc.win['sys'] = sys_prog
     spc.vars = t
     # dump table and spec to file
     s = (
@@ -1742,7 +1746,7 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
         '{table}\n\n'
         'Variable types for bitblaster:\n\n'
         '{vartypes}\n').format(
-            table=vartable, spc=spc.pretty(),
+            table=vartable, spc=spc,
             vartypes=pprint.pformat(t))
     logger.info(s)
     if logger.getEffectiveLevel() < logging.DEBUG:
@@ -1761,16 +1765,16 @@ def dump_ltl_to_json(spc):
         dvars[var] = b
     d = {
         'vars': dvars,
-        'env_init': spc.env_init,
-        'env_safety': f(spc.env_safety),
-        'env_prog': spc.env_prog,
-        'sys_init': f(spc.sys_init),
-        'sys_safety': f(spc.sys_safety),
-        'sys_prog': spc.sys_prog}
+        'env_init': spc.init['env'],
+        'env_safety': f(spc.action['env']),
+        'env_prog': spc.win['env'],
+        'sys_init': f(spc.init['sys']),
+        'sys_safety': f(spc.action['sys']),
+        'sys_prog': spc.win['sys']}
     with open(LTL_SPEC, 'w') as f:
         json.dump(d, f, indent=4)
     with open(SPEC_REPR, 'w') as f:
-        s = repr(spc)
+        s = spc.dumps()
         s = textwrap.fill(s, replace_whitespace=False)
         f.write(s)
     # with open('spec_for_gr1c.txt', 'w') as f:
