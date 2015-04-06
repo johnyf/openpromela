@@ -150,19 +150,28 @@ def spec_to_bits(spec):
             ds[attr] = list()
             continue
         s = ' & '.join('(' + x + ')' for x in a)
-        tree = parser.parse(s)
-        ds[attr] = [tree.flatten(t=t)]
+        ds[attr] = [bitblast(s, t)]
     c = list()
     for x in spec.env_prog:
-        tree = parser.parse(x)
-        c.append(tree.flatten(t=t))
+        c.append(bitblast(x, t))
     ds['env_prog'] = c
     c = list()
     for x in spec.sys_prog:
-        tree = parser.parse(x)
-        c.append(tree.flatten(t=t))
+        c.append(bitblast(x, t))
     ds['sys_prog'] = c
     return ds, t
+
+
+def bitblast(f, t):
+    """Flatten formula `f` to bitvector logic.
+
+    @param f: unquantified first-order temporal logic formula
+    @type f: `str`
+    @param t: symbol table
+    @type t: `dict`
+    """
+    tree = parser.parse(f)
+    return tree.flatten(t=t)
 
 
 def bitblast_table(table):
