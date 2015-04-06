@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import logging
+import openpromela.bdd
 logger = logging.getLogger(__name__)
 logging.getLogger('tulip.ltl_parser_log').setLevel(logging.WARNING)
 h = logging.StreamHandler()
@@ -280,7 +281,7 @@ def test_bool_eq_number():
 
 
 def test_prefix_parser():
-    parser = bv.PrefixParser()
+    parser = openpromela.bdd.PrefixParser()
     nodes = parser._ast
     # &, !
     e = '& x ! y'
@@ -340,7 +341,7 @@ def test_prefix_parser():
 
 def test_flatten_memory_nodes():
     # buffer
-    nodes = bv._make_memory_nodes()
+    nodes = openpromela.bdd._make_memory_nodes()
     x = nodes.Var('x')
     mem = [x, x, x]
     b = nodes.Buffer(mem)

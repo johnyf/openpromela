@@ -1,6 +1,7 @@
 import logging
 from nose.tools import assert_raises
 from openpromela import logic, bitvector
+import openpromela.bdd
 
 
 BIT_LOG = 'bitblaster.txt'
@@ -718,7 +719,7 @@ def slugsin_parser(s, t):
     p = ltl_parser.parse(s)
     bitvector.add_bitnames(slugs_table)
     s = p.flatten(t=slugs_table)
-    slugsin_parser = bitvector.PrefixParser()
+    slugsin_parser = openpromela.bdd.PrefixParser()
     print slugsin_parser.parse(s)
 
 
