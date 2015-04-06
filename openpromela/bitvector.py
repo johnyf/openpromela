@@ -131,18 +131,6 @@ def spec_to_bits(spec):
     spec.env_safety.extend(env_lim_safe)
     spec.sys_safety.extend(sys_lim_safe)
     spec.check_syntax()
-    ds = dict()
-    ds['env_vars'] = dict()
-    ds['sys_vars'] = dict()
-    for var, d in t.iteritems():
-        assert d['owner'] in {'env', 'sys'}
-        if d['type'] == 'int':
-            c = d['bitnames']
-        else:
-            c = [var]
-        whose = '{owner}_vars'.format(owner=d['owner'])
-        ds[whose].update({v: 'boolean' for v in c})
-    logger.debug('slugs variables:\n{v}'.format(v=pprint.pformat(ds)))
     # add GR(1) clauses
     for attr in {'env_init', 'sys_init', 'env_safety', 'sys_safety'}:
         a = getattr(spec, attr)
@@ -890,6 +878,19 @@ def _to_slugs(aut):
 
     @type aut: `symbolic.Automaton`.
     """
+    dvars = dict(env=dict(), sys=dict())
+    for var, d in aut.vars.iteritems():
+        owner = d['owner']
+        assert owner in {'env', 'sys'}, owner
+        if d['type'] == 'int':
+            c = d['bitnames']
+        elif d['type'] == 'bool':
+            c = [var]
+        else:
+            raise Exception(
+                'unknown type "{t}"'.format(t=d['type']))
+        r = {v: 'boolean' for v in c}
+        dvars[owner].update(r)
     logger.debug(
         'slugs variables:\n{v}'.format(v=pprint.pformat(dvars)))
     f = _slugs_str
