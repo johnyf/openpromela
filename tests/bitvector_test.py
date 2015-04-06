@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 import logging
+import networkx as nx
+from openpromela import bitvector as bv
 import openpromela.bdd
+from nose import tools as nt
+
+
 logger = logging.getLogger(__name__)
 logging.getLogger('tulip.ltl_parser_log').setLevel(logging.WARNING)
 h = logging.StreamHandler()
 log = logging.getLogger('openpromela.bitvector')
 log.setLevel(logging.WARNING)
 log.addHandler(h)
-import networkx as nx
-from openpromela import bitvector as bv
-from nose import tools as nt
-
 
 # TODO: test truncation, test ALU up to 32 bits
 
