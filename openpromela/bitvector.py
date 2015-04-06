@@ -25,8 +25,6 @@ import textwrap
 import time
 import humanize
 import networkx as nx
-import ply.lex
-import ply.yacc
 import psutil
 from tulip.spec import ast, lexyacc, GRSpec
 from tulip.spec.translation import make_gr1c_nodes, _to_slugs

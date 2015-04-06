@@ -1,7 +1,6 @@
 """Translate Promela to linear temporal logic (LTL)"""
 from __future__ import absolute_import
 import argparse
-import copy
 import json
 import logging
 import pprint
