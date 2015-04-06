@@ -109,11 +109,11 @@ def _to_slugs(aut):
         _format_slugs_vars(dvars['env'], 'INPUT') +
         _format_slugs_vars(dvars['sys'], 'OUTPUT') +
         # env
-        f(aut.init['env'], 'ENV_INIT', sep='&') +
+        f(aut.init['env'], 'ENV_INIT') +
         f(aut.action['env'], 'ENV_TRANS') +
         f(aut.win['env'], 'ENV_LIVENESS') +
         # sys
-        f(aut.init['sys'], 'SYS_INIT', sep='&') +
+        f(aut.init['sys'], 'SYS_INIT') +
         f(aut.action['sys'], 'SYS_TRANS') +
         f(aut.win['sys'], 'SYS_LIVENESS'))
 
