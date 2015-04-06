@@ -105,51 +105,6 @@ def load_strategy(filename):
     return g
 
 
-def spec_to_bits(spec):
-    """Bitblast `GRSpec` and return `dict` with new attributes.
-
-    The table of variables is built from `spec.vars`,
-    a `dict` that maps each variable name to a `dict` with attr:
-
-      - `"type": "boolean" or "modwrap" or "saturating"`
-      - `"owner": "env" or "sys"`
-      - `"init"`: has suitable `__str__`
-      - `"dom": (min, max)`, range of integer,
-        where `min, max: int`
-
-    @type spec: `GRSpec`
-    """
-    assert isinstance(spec, GRSpec)
-    # populate Boolean vars from table
-    t, env_decl_init, sys_decl_init, \
-        env_lim_safe, sys_lim_safe = bitblast_table(spec.vars)
-    env_vars, sys_vars = to_grspec(t)
-    spec.env_vars = env_vars
-    spec.sys_vars = sys_vars
-    spec.env_init.extend(env_decl_init)
-    spec.sys_init.extend(sys_decl_init)
-    spec.env_safety.extend(env_lim_safe)
-    spec.sys_safety.extend(sys_lim_safe)
-    spec.check_syntax()
-    # add GR(1) clauses
-    for attr in {'env_init', 'sys_init', 'env_safety', 'sys_safety'}:
-        a = getattr(spec, attr)
-        if not a:
-            ds[attr] = list()
-            continue
-        s = ' & '.join('(' + x + ')' for x in a)
-        ds[attr] = [bitblast(s, t)]
-    c = list()
-    for x in spec.env_prog:
-        c.append(bitblast(x, t))
-    ds['env_prog'] = c
-    c = list()
-    for x in spec.sys_prog:
-        c.append(bitblast(x, t))
-    ds['sys_prog'] = c
-    return ds, t
-
-
 def bitblast(f, t):
     """Flatten formula `f` to bitvector logic.
 
@@ -200,14 +155,10 @@ def bitblast_table(table):
         safety[owner].append(
             '({min} <= {x}) & ({x} <= {max})'.format(
                 min=dmin, max=dmax, x=var))
-    env_init = init['env']
-    sys_init = init['sys']
-    env_safe = safety['env']
-    sys_safe = safety['sys']
     check_data_types(t)
     add_bitnames(t)
     logger.info('-- done bitblasting vars table\n')
-    return t, env_init, sys_init, env_safe, sys_safe
+    return t, init, safety
 
 
 def init_to_logic(var, d):
@@ -308,21 +259,6 @@ def bitfields_to_ints(bit_state, t):
             bitvalues.append('0')
         int_state[flatname] = twos_complement_to_int(bitvalues)
     return int_state
-
-
-def to_grspec(t):
-    v = {'env': dict(), 'sys': dict()}
-    for var, d in t.iteritems():
-        dtype = d['type']
-        owner = d['owner']
-        if dtype == 'bool':
-            v[owner][var] = 'boolean'
-        elif dtype == 'int':
-            v[owner][var] = d['dom']
-        else:
-            raise Exception(
-                'unknown type "{dtype}"'.format(dtype=dtype))
-    return v['env'], v['sys']
 
 
 class Parser(lexyacc.Parser):
