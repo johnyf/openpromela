@@ -27,7 +27,7 @@ import humanize
 import networkx as nx
 import psutil
 from tulip.spec import ast, lexyacc, GRSpec
-from tulip.spec.translation import make_gr1c_nodes, _to_slugs
+from tulip.spec.translation import make_gr1c_nodes
 from tulip import synth
 
 
@@ -883,6 +883,49 @@ def _format_mem(mem):
     return 'memory:\n{mem}\n'.format(
         mem='\n'.join('{i}: {v}'.format(i=i, v=v)
                       for i, v in enumerate(mem)))
+
+
+def _to_slugs(aut):
+    """Return spec in `slugsin` format.
+
+    @type aut: `symbolic.Automaton`.
+    """
+    logger.debug(
+        'slugs variables:\n{v}'.format(v=pprint.pformat(dvars)))
+    f = _slugs_str
+    return (
+        _format_slugs_vars(d['env_vars'], 'INPUT') +
+        _format_slugs_vars(d['sys_vars'], 'OUTPUT') +
+        # env
+        f(d.init['env'], 'ENV_INIT', sep='&') +
+        f(d.action['env'], 'ENV_TRANS') +
+        f(d.win['env'], 'ENV_LIVENESS') +
+        # sys
+        f(d.init['sys'], 'SYS_INIT', sep='&') +
+        f(d.action['sys'], 'SYS_TRANS') +
+        f(d.win['sys'], 'SYS_LIVENESS'))
+
+
+def _slugs_str(r, name, sep='\n'):
+    if not r:
+        return '[{name}]\n'.format(name=name)
+    sep = ' {sep} '.format(sep=sep)
+    f = sep.join(x for x in r if x)
+    return '[{name}]\n{f}\n\n'.format(name=name, f=f)
+
+
+def _format_slugs_vars(vardict, name):
+    a = []
+    for var, dom in vardict.iteritems():
+        if dom == 'boolean':
+            a.append(var)
+        elif isinstance(dom, tuple) and len(dom) == 2:
+            a.append('{var}: {min}...{max}'.format(
+                var=var, min=dom[0], max=dom[1]))
+        else:
+            raise ValueError('unknown domain type: {dom}'.format(dom=dom))
+    a = natsort.natsorted(a)
+    return '[{name}]\n{vars}\n\n'.format(name=name, vars='\n'.join(a))
 
 
 def _call_slugs(filename, symbolic=True, bddfile=None, real=True):
