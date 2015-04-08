@@ -13,7 +13,7 @@ Slugsin syntax:
 from __future__ import absolute_import
 import logging
 import ply.lex
-from logic import ast
+from logic.ast import Nodes as _Nodes
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ class PrefixParser(object):
         self.tokens = self.lexer.tokens
         self._binary = {'AND', 'OR', 'XOR'}
         if nodes is None:
-            nodes = _make_memory_nodes()
+            nodes = MemoryNodes()
         self._ast = nodes
 
     def parse(self, data):
@@ -109,8 +109,7 @@ class PrefixParser(object):
             raise Exception('Unknown token "{t}"'.format(t=tok))
 
 
-def _make_memory_nodes():
-    nodes = ast.make_fol_nodes()
+class MemoryNodes(_Nodes):
 
     # difference with slugs parser:
     # cyclic references are possible, but assumed absent
@@ -137,33 +136,27 @@ def _make_memory_nodes():
                 s=' ' * (indent - 1),
                 s1=' ' * indent)
 
-    class Register(nodes.Terminal):
+    class Register(_Nodes.Terminal):
         def __init__(self, value):
-            super(Register, self).__init__(value)
+            super(MemoryNodes.Register, self).__init__(value)
             self.type = 'register'
 
         def flatten(self, *arg, **kw):
             return 'reg[{i}]'.format(i=self.value)
 
     # infix Binary flattening
-    class Operator(nodes.Operator):
+    class Operator(_Nodes.Operator):
         def flatten(self, *arg, **kw):
             if len(self.operands) == 2:
-                return nodes.Binary.flatten(self)
+                return MemoryNodes.Binary.flatten(self)
             else:
-                return super(Operator, self).flatten()
-
-    nodes.Buffer = Buffer
-    nodes.Register = Register
-    nodes.Operator = Operator
-    return nodes
+                return super(MemoryNodes.Operator, self).flatten()
 
 
-def make_bdd_nodes():
+class BDDNodes(MemoryNodes):
     """Factory of AST to flatten prefix syntax to a BDD."""
-    nodes = _make_memory_nodes()
 
-    class Buffer(nodes.Buffer):
+    class Buffer(MemoryNodes.Buffer):
         def flatten(self, bdd, *arg, **kw):
             mem = list()
             for u in self.memory:
@@ -173,7 +166,7 @@ def make_bdd_nodes():
             # print 'mem: ', mem, ', res: ', r
             return r
 
-    class Operator(nodes.Operator):
+    class Operator(MemoryNodes.Operator):
         def flatten(self, bdd, *arg, **kw):
             operands = [
                 u.flatten(bdd=bdd, *arg, **kw)
@@ -182,7 +175,7 @@ def make_bdd_nodes():
             # print 'op: ', self.operator, operands, u
             return u
 
-    class Register(nodes.Register):
+    class Register(MemoryNodes.Register):
         def flatten(self, bdd, mem, *arg, **kw):
             i = int(self.value)
             # no circular refs
@@ -191,13 +184,13 @@ def make_bdd_nodes():
             # print 'reg: ', i, ', of mem: ', mem, ', contains: ', r
             return r
 
-    class Var(nodes.Var):
+    class Var(MemoryNodes.Var):
         def flatten(self, bdd, *arg, **kw):
             u = bdd.add_ast(self)
             # print 'add var: ', self.value, u
             return u
 
-    class Num(nodes.Num):
+    class Num(MemoryNodes.Num):
         def flatten(self, bdd, *arg, **kw):
             # the only registers in the tree are Boolean constants
             assert self.value in ('0', '1'), self.value
@@ -205,10 +198,3 @@ def make_bdd_nodes():
             if u == 0:
                 u = -1
             return u
-
-    nodes.Buffer = Buffer
-    nodes.Register = Register
-    nodes.Operator = Operator
-    nodes.Var = Var
-    nodes.Num = Num
-    return nodes

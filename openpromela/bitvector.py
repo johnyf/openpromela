@@ -17,7 +17,7 @@ import logging
 import math
 import networkx as nx
 from tulip.spec import ast, lexyacc, GRSpec
-from tulip.spec.ast import make_fol_nodes
+from logic.ast import Nodes as _Nodes
 
 
 logger = logging.getLogger(__name__)
@@ -185,7 +185,7 @@ class Parser(lexyacc.Parser):
     tabmodule = 'slugsin_parsetab'
 
     def __init__(self):
-        super(Parser, self).__init__(ast=make_slugsin_nodes())
+        super(Parser, self).__init__(nodes=Nodes())
 
     def p_truncator(self, p):
         """expr : expr TRUNCATE number"""
@@ -204,7 +204,7 @@ def make_dummy_table():
     return t
 
 
-def make_slugsin_nodes():
+class Nodes(_Nodes):
     """Return object with AST node classes as attributes."""
     opmap = {
         'False': '0', 'True': '1',
@@ -215,12 +215,11 @@ def make_slugsin_nodes():
         # 'G': '[]', 'F': '<>',
         '<': '<', '<=': '<=', '=': '=', '>=': '>=', '>': '>', '!=': '!=',
         '+': '+', '-': '-'}
-    nodes = make_fol_nodes(opmap)
 
-    class Operator(nodes.Operator):
+    class Operator(_Nodes.Operator):
         def flatten(self, mem=None, *arg, **kw):
             if self.operator != 'ite':
-                return super(Operator, self).flatten(mem=mem, *arg, **kw)
+                return super(Nodes.Operator, self).flatten(mem=mem, *arg, **kw)
             # ternary conditional
             assert self.operator == 'ite'
             x = self.operands[0].flatten(mem=None, *arg, **kw)
@@ -232,7 +231,7 @@ def make_slugsin_nodes():
             else:
                 return ite_function(x, y, z, mem=mem)
 
-    class Unary(nodes.Unary):
+    class Unary(_Nodes.Unary):
         def flatten(self, *arg, **kw):
             logger.info('flatten "{s}"'.format(s=repr(self)))
             if self.operator == 'X':
@@ -241,11 +240,11 @@ def make_slugsin_nodes():
                 # (because in arithmetic context it is a list)
                 return self.operands[0].flatten(*arg, **kw)
             return ' {op} {x}'.format(
-                op=self.opmap[self.operator],
+                op=Nodes.opmap[self.operator],
                 x=self.operands[0].flatten(*arg, **kw))
 
     # prefix and rm parentheses
-    class Binary(nodes.Binary):
+    class Binary(_Nodes.Binary):
         def flatten(self, *arg, **kw):
             """Prefix flattener."""
             logger.info('flatten "{s}"'.format(s=repr(self)))
@@ -254,9 +253,9 @@ def make_slugsin_nodes():
             assert isinstance(x, basestring), x
             assert isinstance(y, basestring), y
             return ' {op} {x} {y} '.format(
-                op=self.opmap[self.operator], x=x, y=y)
+                op=Nodes.opmap[self.operator], x=x, y=y)
 
-    class Var(nodes.Var):
+    class Var(_Nodes.Var):
         def flatten(self, prime=None, mem=None, t=None, *arg, **kw):
             logger.info('flatten "{s}"'.format(s=repr(self)))
             name = self.value
@@ -276,12 +275,12 @@ def make_slugsin_nodes():
                 for b in bits]
             return bits
 
-    class Num(nodes.Num):
+    class Num(_Nodes.Num):
         def flatten(self, *arg, **kw):
             logger.info('flatten "{s}"'.format(s=repr(self)))
             return int_to_twos_complement(self.value)
 
-    class Truncator(nodes.Binary):
+    class Truncator(_Nodes.Binary):
         def flatten(self, *arg, **kw):
             logger.info('[++ flatten "{s}"'.format(s=repr(self)))
             p = self.operands[0].flatten(*arg, **kw)
@@ -295,7 +294,7 @@ def make_slugsin_nodes():
             logger.info('--] done flattening truncator.\n')
             return tr
 
-    class Comparator(nodes.Comparator):
+    class Comparator(_Nodes.Comparator):
         def flatten(self, mem=None, *arg, **kw):
             logger.info('flatten "{s}"'.format(s=repr(self)))
             assert mem is None, (
@@ -306,7 +305,7 @@ def make_slugsin_nodes():
             q = self.operands[1].flatten(mem=mem, *arg, **kw)
             return flatten_comparator(self.operator, p, q, mem)
 
-    class Arithmetic(nodes.Arithmetic):
+    class Arithmetic(_Nodes.Arithmetic):
         def flatten(self, mem=None, *arg, **kw):
             logger.info('flatten "{s}"'.format(s=repr(self)))
             # only for testing purposes
@@ -316,16 +315,6 @@ def make_slugsin_nodes():
             p = self.operands[0].flatten(mem=mem, *arg, **kw)
             q = self.operands[1].flatten(mem=mem, *arg, **kw)
             return flatten_arithmetic(self.operator, p, q, mem)
-
-    nodes.Operator = Operator
-    nodes.Unary = Unary
-    nodes.Binary = Binary
-    nodes.Var = Var
-    nodes.Num = Num
-    nodes.Truncator = Truncator
-    nodes.Comparator = Comparator
-    nodes.Arithmetic = Arithmetic
-    return nodes
 
 
 parser = Parser()
