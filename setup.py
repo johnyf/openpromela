@@ -29,10 +29,6 @@ if __name__ == '__main__':
         f.write(s)
     pip.main([
         'install',
-        '--allow-unverified', 'promela == 0.0.1',
-        'https://github.com/johnyf/promela/archive/master.zip',
-        '--allow-unverified', 'tulip >= 1.2.dev',
-        'https://github.com/johnyf/tulip-control/archive/easysetup.zip',
         'psutil >= 2.2.0',
         'humanize >= 0.5.1'])
     build_parser_table()
@@ -48,7 +44,6 @@ if __name__ == '__main__':
         install_requires=[
             'promela >= 0.0.1',
             'networkx >= 1.9.1',
-            'tulip >= 1.2.dev',
             'psutil >= 2.2.0'],
         tests_require=['nose'],
         packages=['openpromela'],

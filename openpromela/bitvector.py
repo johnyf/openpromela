@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import logging
 import math
 import networkx as nx
-from tulip.spec import ast, lexyacc, GRSpec
+from logic import lexyacc
 from logic.ast import Nodes as _Nodes
 
 

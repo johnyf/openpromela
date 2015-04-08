@@ -9,9 +9,9 @@ import warnings
 import networkx as nx
 from networkx.utils import misc
 from promela import ast, lex, yacc
-from tulip.spec import gr1_fragment
 from openpromela import bitvector, version, slugs
 import logic.symbolic
+from logic import gr1_fragment
 
 
 logger = logging.getLogger(__name__)
