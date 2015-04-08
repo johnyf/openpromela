@@ -207,7 +207,7 @@ def make_dummy_table():
 class Nodes(_Nodes):
     """Return object with AST node classes as attributes."""
     opmap = {
-        'False': '0', 'True': '1',
+        'false': '0', 'true': '1',
         '!': '!',
         '|': '|', '&': '&', '->': '| !', '<->': '! ^',
         'ite': 'ite',
@@ -279,6 +279,10 @@ class Nodes(_Nodes):
         def flatten(self, *arg, **kw):
             logger.info('flatten "{s}"'.format(s=repr(self)))
             return int_to_twos_complement(self.value)
+
+    class Bool(_Nodes.Bool):
+        def flatten(self, *arg, **kw):
+            return Nodes.opmap[self.value.lower()]
 
     class Truncator(_Nodes.Binary):
         def flatten(self, *arg, **kw):
