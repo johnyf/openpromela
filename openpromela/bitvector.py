@@ -289,8 +289,9 @@ class Nodes(_Nodes):
             logger.info('[++ flatten "{s}"'.format(s=repr(self)))
             p = self.operands[0].flatten(*arg, **kw)
             assert isinstance(p, list), p
-            assert isinstance(self.operands[1], nodes.Num)
-            n = int(self.operands[1].value)
+            y = self.operands[1]
+            assert isinstance(y, Nodes.Num), (type(y), y)
+            n = int(y.value)
             tr = truncate(p, n)
             # if extended, should not use MSB of truncation
             tr.append('0')
