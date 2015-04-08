@@ -189,7 +189,7 @@ class Parser(lexyacc.Parser):
 
     def p_truncator(self, p):
         """expr : expr TRUNCATE number"""
-        p[0] = self.ast.Truncator(p[2], p[1], p[3])
+        p[0] = self.nodes.Truncator(p[2], p[1], p[3])
 
 
 class ScopeError(Exception):
