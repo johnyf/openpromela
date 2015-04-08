@@ -17,7 +17,7 @@ log.setLevel(5)
 # avoid nose dumping PDFs
 logging.getLogger('promela.ast').setLevel('ERROR')
 logging.getLogger('promela.yacc.parser').setLevel('ERROR')
-logging.getLogger('tulip').setLevel('ERROR')
+logging.getLogger('astutils').setLevel('ERROR')
 
 
 def test_conj():
