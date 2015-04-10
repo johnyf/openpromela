@@ -33,7 +33,7 @@ def synthesize(spec, symbolic=True, bddfile=None, real=True):
     @rtype: `automata.Transducer` or `symbolic.Automaton`
     """
     logger.info('++ compile LTL to slugsin\n')
-    aut = logic.symbolic.bitblast_spec(spec)
+    aut = logic.symbolic._bitblast(spec)
     s = _to_slugs(aut)
     # dump for use in manual debugging
     if logger.getEffectiveLevel() < logging.DEBUG:
