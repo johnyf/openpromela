@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Bit-blasting for signed integer arithmetic.
 
 This module translates Boolean formulas that can

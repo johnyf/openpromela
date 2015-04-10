@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Translate Promela to linear temporal logic (LTL)"""
 from __future__ import absolute_import
 import argparse

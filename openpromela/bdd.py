@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Slugsin parser with BDD backend.
 
 This module translates Boolean formulas in prefix format
