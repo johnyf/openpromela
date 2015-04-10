@@ -4,6 +4,7 @@
 This module translates Boolean formulas in prefix format
 to binary decision diagrams.
 
+
 Reference
 =========
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 slugs_log = logging.getLogger(__name__ + '.slugs')
 
 
-class SlugsLexer(object):
+class Lexer(object):
     """Token rules for slugsin lexer."""
 
     operators = ['NOT', 'AND', 'OR', 'XOR', 'DOLLAR', 'QUESTION']
@@ -48,17 +49,17 @@ class SlugsLexer(object):
         raise Exception('Illegal character "{t}"'.format(t=t.value[0]))
 
 
-class PrefixParser(object):
+class Parser(object):
     """Parser for prefix syntax with buffers."""
     # Context-sensitive grammar, so cannot use PLY
 
     def __init__(self, nodes=None):
-        self.lexer = SlugsLexer()
+        if nodes is None:
+            nodes = Nodes()
+        self._nodes = nodes
+        self.lexer = Lexer()
         self.tokens = self.lexer.tokens
         self._binary = {'AND', 'OR', 'XOR'}
-        if nodes is None:
-            nodes = MemoryNodes()
-        self._ast = nodes
 
     def parse(self, data):
         self.lexer.lexer.input(data)
@@ -85,31 +86,32 @@ class PrefixParser(object):
         t = tok.type
         if t == 'NOT':
             x = self._recurse()
-            return self._ast.Operator('!', x)
+            return self._nodes.Operator('!', x)
         elif t in self._binary:
             op = tok.value
             x = self._recurse()
             y = self._recurse()
-            return self._ast.Operator(op, x, y)
+            return self._nodes.Operator(op, x, y)
         elif t == 'DOLLAR':
             u = self._recurse()
             assert u.type == 'num', u.type
             n = int(u.value)
             mem = [self._recurse() for i in xrange(n)]
-            return self._ast.Buffer(mem)
+            return self._nodes.Buffer(mem)
         elif t == 'QUESTION':
             u = self._recurse()
             assert u.type == 'num', u.type
-            return self._ast.Register(u.value)
+            return self._nodes.Register(u.value)
         elif t == 'NAME':
-            return self._ast.Var(tok.value)
+            return self._nodes.Var(tok.value)
         elif t == 'NUMBER':
-            return self._ast.Num(tok.value)
+            return self._nodes.Num(tok.value)
         else:
             raise Exception('Unknown token "{t}"'.format(t=tok))
 
 
-class MemoryNodes(_Nodes):
+class Nodes(_Nodes):
+    """AST that that evaluates memory buffers."""
 
     # difference with slugs parser:
     # cyclic references are possible, but assumed absent
@@ -124,6 +126,50 @@ class MemoryNodes(_Nodes):
             return 'Memory({c})'.format(
                 c=', '.join(repr(u) for u in self.memory))
 
+        def flatten(self, mem=None, *arg, **kw):
+            mem = list()
+            for u in self.memory:
+                s = u.flatten(mem=mem, *arg, **kw)
+                mem.append(s)
+            r = mem[-1]
+            # print 'mem: ', mem, ', res: ', r
+            return r
+
+    class Register(_Nodes.Terminal):
+        def __init__(self, value):
+            super(Nodes.Register, self).__init__(value)
+            self.type = 'register'
+
+        def flatten(self, mem, *arg, **kw):
+            i = int(self.value)
+            # no circular refs
+            assert 0 <= i < len(mem), (i, mem)
+            r = mem[i]
+            # print 'reg: ', i, ', of mem: ', mem, ', contains: ', r
+            return r
+
+    # infix Binary flattening
+    class Operator(_Nodes.Operator):
+        def flatten(self, *arg, **kw):
+            if len(self.operands) == 1:
+                return ' '.join([
+                    '(',
+                    self.operator,
+                    self.operands[0].flatten(*arg, **kw),
+                    ')'])
+            assert len(self.operands) == 2, self.operands
+            return ' '.join([
+                '(',
+                self.operands[0].flatten(*arg, **kw),
+                self.operator,
+                self.operands[1].flatten(*arg, **kw),
+                ')'])
+
+
+class DebugNodes(Nodes):
+    """AST to expand memory buffers."""
+
+    class Buffer(Nodes.Buffer):
         def flatten(self, indent=0, *arg, **kw):
             indent += 1
             sep = ',\n{s}'.format(s=' ' * indent)
@@ -136,37 +182,15 @@ class MemoryNodes(_Nodes):
                 s=' ' * (indent - 1),
                 s1=' ' * indent)
 
-    class Register(_Nodes.Terminal):
-        def __init__(self, value):
-            super(MemoryNodes.Register, self).__init__(value)
-            self.type = 'register'
-
+    class Register(Nodes.Register):
         def flatten(self, *arg, **kw):
             return 'reg[{i}]'.format(i=self.value)
 
-    # infix Binary flattening
-    class Operator(_Nodes.Operator):
-        def flatten(self, *arg, **kw):
-            if len(self.operands) == 2:
-                return MemoryNodes.Binary.flatten(self)
-            else:
-                return super(MemoryNodes.Operator, self).flatten()
 
+class BDDNodes(Nodes):
+    """AST to flatten prefix syntax to a BDD."""
 
-class BDDNodes(MemoryNodes):
-    """Factory of AST to flatten prefix syntax to a BDD."""
-
-    class Buffer(MemoryNodes.Buffer):
-        def flatten(self, bdd, *arg, **kw):
-            mem = list()
-            for u in self.memory:
-                s = u.flatten(bdd=bdd, mem=mem)
-                mem.append(s)
-            r = mem[-1]
-            # print 'mem: ', mem, ', res: ', r
-            return r
-
-    class Operator(MemoryNodes.Operator):
+    class Operator(Nodes.Operator):
         def flatten(self, bdd, *arg, **kw):
             operands = [
                 u.flatten(bdd=bdd, *arg, **kw)
@@ -175,24 +199,15 @@ class BDDNodes(MemoryNodes):
             # print 'op: ', self.operator, operands, u
             return u
 
-    class Register(MemoryNodes.Register):
-        def flatten(self, bdd, mem, *arg, **kw):
-            i = int(self.value)
-            # no circular refs
-            assert 0 <= i < len(mem), (i, mem)
-            r = mem[i]
-            # print 'reg: ', i, ', of mem: ', mem, ', contains: ', r
-            return r
-
-    class Var(MemoryNodes.Var):
+    class Var(Nodes.Var):
         def flatten(self, bdd, *arg, **kw):
             u = bdd.add_ast(self)
             # print 'add var: ', self.value, u
             return u
 
-    class Num(MemoryNodes.Num):
+    class Num(Nodes.Num):
         def flatten(self, bdd, *arg, **kw):
-            # the only registers in the tree are Boolean constants
+            # the only numbers in the tree are Boolean constants
             assert self.value in ('0', '1'), self.value
             u = int(self.value)
             if u == 0:
