@@ -43,9 +43,9 @@ def bitblast_table(table):
     for var, d in table.iteritems():
         dtype = d['type']
         owner = d['owner']
-        if dtype == 'boolean':
+        if dtype in ('boolean', 'bool'):
             b = dict(type='bool', owner=owner)
-        elif dtype == 'saturating' or dtype == 'modwrap':
+        elif dtype in ('saturating', 'modwrap', 'int'):
             dom = d['dom']
             assert len(dom) == 2, dom
             signed, width = dom_to_width(dom)
@@ -55,6 +55,9 @@ def bitblast_table(table):
         else:
             raise Exception(
                 'unknown type: "{dtype}"'.format(dtype=dtype))
+        if dtype == 'int':
+            print('warning: "int" found as type '
+                  '(instead of "saturating")')
         t[var] = b
         # initial value
         # imperative var or free var assigned at decl ?
