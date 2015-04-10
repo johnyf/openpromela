@@ -129,6 +129,33 @@ def check_data_types(t):
             'unknown type: "{dtype}"'.format(dtype=d['type']))
 
 
+def list_bits(dvars):
+    """Return symbol table of bits (comprising bitfields).
+
+    For symbol table definition, see `bitblast`.
+
+    @param dvars: symbol table of integer and Boolean vars
+    @type dvars: `dict` of `dict`
+    @return: symbol table of bits
+    @rtype: `dict` of `dict`
+    """
+    dout = dict()
+    for var, d in dvars.iteritems():
+        dtype = d['type']
+        if dtype == 'int':
+            c = d['bitnames']
+        elif dtype == 'bool':
+            c = [var]
+        else:
+            raise Exception(
+                'unknown type "{t}"'.format(t=dtype))
+        owner = d['owner']
+        assert owner in {'env', 'sys'}, owner
+        for bit in c:
+            dout[bit] = dict(type='bool', owner=owner)
+    return dout
+
+
 def bitfield_to_int_states(g, t):
     """Convert bitfields to integers for "state" at each strategy node.
 

@@ -89,25 +89,13 @@ def _to_slugs(aut):
 
     @type aut: `symbolic.Automaton`.
     """
-    dvars = dict(env=dict(), sys=dict())
-    for var, d in aut.vars.iteritems():
-        owner = d['owner']
-        assert owner in {'env', 'sys'}, owner
-        if d['type'] == 'int':
-            c = d['bitnames']
-        elif d['type'] == 'bool':
-            c = [var]
-        else:
-            raise Exception(
-                'unknown type "{t}"'.format(t=d['type']))
-        r = {v: 'boolean' for v in c}
-        dvars[owner].update(r)
+    dbits = bitvector.list_bits(aut.vars)
     logger.debug(
-        'slugs variables:\n{v}'.format(v=pprint.pformat(dvars)))
+        'slugs variables:\n{v}'.format(v=pprint.pformat(dbits)))
     f = _slugs_str
     return (
-        _format_slugs_vars(dvars['env'], 'INPUT') +
-        _format_slugs_vars(dvars['sys'], 'OUTPUT') +
+        _format_slugs_vars(dbits, 'env', 'INPUT') +
+        _format_slugs_vars(dbits, 'sys', 'OUTPUT') +
         # env
         f(aut.init['env'], 'ENV_INIT') +
         f(aut.action['env'], 'ENV_TRANS') +
@@ -126,16 +114,9 @@ def _slugs_str(r, name, sep='\n'):
     return '[{name}]\n{f}\n\n'.format(name=name, f=f)
 
 
-def _format_slugs_vars(vardict, name):
-    a = []
-    for var, dom in vardict.iteritems():
-        if dom == 'boolean':
-            a.append(var)
-        elif isinstance(dom, tuple) and len(dom) == 2:
-            a.append('{var}: {min}...{max}'.format(
-                var=var, min=dom[0], max=dom[1]))
-        else:
-            raise ValueError('unknown domain type: {dom}'.format(dom=dom))
+def _format_slugs_vars(dvars, owner, name):
+    a = [var for var, d in dvars.iteritems()
+         if d['owner'] == owner]
     a = natsort.natsorted(a)
     return '[{name}]\n{vars}\n\n'.format(name=name, vars='\n'.join(a))
 
