@@ -1,3 +1,4 @@
+"""Interface to `slugs` synthesizer."""
 from __future__ import absolute_import
 import datetime
 import json
@@ -25,11 +26,11 @@ BDD_FILE = 'bdd.txt'
 def synthesize(spec, symbolic=True, bddfile=None, real=True):
     """Return strategy satisfying the specification `spec`.
 
-    @param spec: GR(1) specification
-    @type spec: `tulip.spec.GRSpec`
+    @param spec: specification
+    @type spec: `symbolic.Automaton`
 
     @return: If realizable return synthesized strategy, otherwise `None`.
-    @rtype: `networkx.DiGraph`
+    @rtype: `automata.Transducer` or `symbolic.Automaton`
     """
     logger.info('++ compile LTL to slugsin\n')
     aut = logic.symbolic.bitblast_spec(spec)
