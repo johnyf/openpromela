@@ -213,3 +213,23 @@ class BDDNodes(Nodes):
             if u == 0:
                 u = -1
             return u
+
+
+parser = Parser(nodes=BDDNodes())
+
+
+def add_expr(e, bdd):
+    """Add to `bdd` a node for Boolean expression `e`.
+
+    @param e: expression in SLUGSIN syntax
+    @type e: `str`
+    @param t: symbol table
+    @type t: `dict`
+    @type bdd: `BDD`
+
+    @return: node in `bdd` corresponding to `e`
+    @rtype: `int`
+    """
+    tree = parser.parse(e)
+    u = tree.flatten(bdd=bdd)
+    return u
