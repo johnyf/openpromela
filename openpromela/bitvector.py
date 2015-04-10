@@ -219,8 +219,6 @@ class Parser(lexyacc.Parser):
         p[0] = self.nodes.Truncator(p[2], p[1], p[3])
 
 
-class ScopeError(Exception):
-    pass
 
 
 def make_dummy_table():
