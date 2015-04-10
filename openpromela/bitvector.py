@@ -222,6 +222,25 @@ class Parser(lexyacc.Parser):
         p[0] = self.nodes.Truncator(p[2], p[1], p[3])
 
 
+def make_table(d, env_vars=None):
+    """Return symbol table from "simple" `dict`."""
+    if env_vars is None:
+        env_vars = set()
+    t = dict()
+    for var, dom in d.iteritems():
+        if dom == 'bool':
+            dtype = 'bool'
+            dom = None
+        else:
+            assert isinstance(dom, tuple), (var, dom)
+            assert len(dom) == 2, (var, dom)
+            dtype = 'saturating'
+        if var in env_vars:
+            owner = 'env'
+        else:
+            owner = 'sys'
+        t[var] = dict(type=dtype, dom=dom, owner=owner)
+    return t
 
 
 def make_dummy_table():
