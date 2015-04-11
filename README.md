@@ -18,20 +18,32 @@ Filippidis I., Murray R.M., Holzmann G.J.;
 [Synthesis from multi-paradigm specifications](http://resolver.caltech.edu/CaltechCDSTR:2015.003), California Institute of Technology, Pasadena, CA, 2015 (CDSTR:2015.003)
 
 
+Usage
+=====
+
+The package can be used both as a library and from the command line. A script named `ospin` is created as entry point. It is placed where `setuptools` installs new executables, e.g., whre `python` itself resides. To learn how to use the script, invoke it with:
+
+```
+ospin --help
+```
+
+
 Installation
 ============
 
-You can install from PyPI using `pip`:
+The Python dependencies can be installed using `pip`:
 
 ```
-pip install openpromela
+pip install -r requirements.txt
 ```
 
-or locally using `setuptools`:
+When these dependencies stabilize, they will be made available on PyPI. After the dependencies are installed, then the `openpromela` package can be installed with:
 
 ```
 python setup.py install
 ```
+
+The only non-Python dependency is the synthesizer [`slugs`](https://github.com/LTLMoP/slugs). It can be installed by either running `install_slugs.sh`, or following its installation instructions.
 
 
 License
