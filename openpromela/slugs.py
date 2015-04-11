@@ -23,11 +23,14 @@ SLUGS_SPEC = 'spec_slugs.txt'
 BDD_FILE = 'bdd.txt'
 
 
-def synthesize(spec, symbolic=True, bddfile=None, real=True):
+def synthesize(spec, symbolic=True, bddfile=None, make=True):
     """Return strategy satisfying the specification `spec`.
 
-    @param spec: specification
+    @param spec: first-order Street(1)
     @type spec: `symbolic.Automaton`
+    @param symbolic: select between symbolic and enumerated transducer
+    @param bddfile: CUDD dumps the strategy in this file
+    @param make: if `False`, then only check realizability
 
     @return: If realizable return synthesized strategy, otherwise `None`.
     @rtype: `automata.Transducer` or `symbolic.Automaton`
@@ -47,7 +50,7 @@ def synthesize(spec, symbolic=True, bddfile=None, real=True):
         spec=spec) + '\n\n slugs in:\n\n {s}\n'.format(s=s))
     logger.info('-- done compiling to slugsin')
     realizable, out = _call_slugs(
-        fin.name, symbolic=symbolic, bddfile=bddfile, real=real)
+        fin.name, symbolic=symbolic, bddfile=bddfile, make=make)
     os.unlink(fin.name)
     logger.debug('slugs output:\n{out}'.format(out=out))
     if realizable:
@@ -122,12 +125,12 @@ def _format_slugs_vars(dvars, owner, name):
     return '[{name}]\n{vars}\n\n'.format(name=name, vars='\n'.join(a))
 
 
-def _call_slugs(filename, symbolic=True, bddfile=None, real=True):
+def _call_slugs(filename, symbolic=True, bddfile=None, make=True):
     """Call `slugs` and log memory usage and time."""
     if bddfile is None:
         bddfile = BDD_FILE
     options = ['slugs', filename]
-    if real:
+    if make:
         if symbolic:
             options.extend(['--symbolicStrategy', bddfile])
         else:
