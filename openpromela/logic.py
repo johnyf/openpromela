@@ -13,6 +13,8 @@ from promela import ast, lex, yacc
 from openpromela import bitvector, version, slugs
 import logic.symbolic
 from logic import gr1_fragment
+from logic.syntax import conj as _conj
+from logic.syntax import disj as _disj
 
 
 logger = logging.getLogger(__name__)
@@ -1610,66 +1612,6 @@ def pm_str(player):
     it sets this variable to `True`.
     """
     return 'pm_{player}'.format(player=player)
-
-
-def _conj(iterable, sep=''):
-    return _associative_op(iterable, '&', sep)
-
-
-def _disj(iterable, sep=''):
-    return _associative_op(iterable, '|', sep)
-
-
-def _associative_op(iterable, op, sep):
-    """Apply associative binary operator `op`, using `sep` as separator."""
-    if op not in {'&', '|'}:
-        raise Exception('operator "{op}" not supported.'.format(op=op))
-    true = 'True'
-    false = 'False'
-    if op == '&':
-        true, false = false, true
-    glue = ') ' + sep + op + ' ('
-    # avoid consuming a generator
-    h = [x for x in iterable if x]
-    return _recurse_op(0, len(h), h, true, false, glue)
-
-
-def _recurse_op(a, b, h, true, false, glue):
-    """Apply binary operator recursively.
-
-    @param a: start of sublist
-    @type a: int in [0, len(h)]
-    @param b: end of sublist
-    @type b: int in [0, len(h)]
-    @param h: `list`
-    @param true, false: permutation of 'True', 'False'
-    @param glue: used to concatenate a, b
-    """
-    n = b - a
-    # empty ?
-    if not n:
-        return false
-    # singleton ?
-    if n == 1:
-        return h[a]
-    # power of 2 ?
-    m = (n - 1).bit_length() - 1
-    c = a + 2**m
-    x = _recurse_op(a, c, h, true, false, glue)
-    y = _recurse_op(c, b, h, true, false, glue)
-    # controlling value ?
-    # don't care ?
-    if x == true or y == true:
-        return true
-    if x == false:
-        return y
-    if y == false:
-        return x
-    return '(' + x + glue + y + ')'
-
-
-def _paren(iterable):
-    return ('(' + x + ')' for x in iterable)
 
 
 def _invariant(flatname, dom, length=None):
