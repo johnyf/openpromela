@@ -21,17 +21,19 @@ Filippidis I., Murray R.M., Holzmann G.J.;
 Installation
 ============
 
-You can install from PyPI using `pip`:
+The Python dependencies can be installed using `pip`:
 
 ```
-pip install openpromela
+pip install -r requirements.txt
 ```
 
-or locally using `setuptools`:
+When these dependencies stabilize, they will be made available on PyPI. After the dependencies are installed, then the `openpromela` package can be installed with:
 
 ```
 python setup.py install
 ```
+
+The only non-Python dependency is the synthesizer [`slugs`](https://github.com/LTLMoP/slugs). It can be installed by either running `install_slugs.sh`, or following its installation instructions.
 
 
 License
