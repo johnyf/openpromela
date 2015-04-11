@@ -342,7 +342,7 @@ def test_prefix_parser():
 
 def test_flatten_memory_nodes():
     # buffer
-    nodes = openpromela.bdd.MemoryNodes()
+    nodes = openpromela.bdd.DebugNodes()
     x = nodes.Var('x')
     mem = [x, x, x]
     b = nodes.Buffer(mem)

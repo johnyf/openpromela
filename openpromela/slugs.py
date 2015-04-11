@@ -10,7 +10,9 @@ import time
 import tempfile
 import textwrap
 import humanize
-import logic.symbolic
+from omega import machines
+from omega.symbolic import symbolic as _symbolic
+from omega.logic import translation
 import natsort
 import networkx as nx
 from openpromela import bitvector
@@ -37,7 +39,7 @@ def synthesize(spec, symbolic=True, bddfile=None, make=True):
     @rtype: `automata.Transducer` or `symbolic.Automaton`
     """
     logger.info('++ compile LTL to slugsin\n')
-    aut = logic.symbolic._bitblast(spec)
+    aut = _symbolic._bitblast(spec)
     s = _to_slugs(aut)
     # dump for use in manual debugging
     if logger.getEffectiveLevel() < logging.DEBUG:

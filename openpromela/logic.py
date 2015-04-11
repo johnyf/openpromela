@@ -11,10 +11,9 @@ import networkx as nx
 from networkx.utils import misc
 from promela import ast, lex, yacc
 from openpromela import bitvector, version, slugs
-import logic.symbolic
-from logic import gr1_fragment
-from logic.syntax import conj as _conj
-from logic.syntax import disj as _disj
+from omega.symbolic import symbolic as _symbolic
+from omega import gr1
+from omega.logic.syntax import conj, disj
 
 
 logger = logging.getLogger(__name__)
@@ -501,7 +500,7 @@ class AST(object):
         def to_logic(self, t, pid, assume):
             c = [stmt.to_guard(t, pid, assume)
                  for stmt in self.other_guards]
-            s = _conj('! ({s})'.format(s=s) for s in c)
+            s = conj('! ({s})'.format(s=s) for s in c)
             return s, 'boolean'
 
         def to_guard(self, *arg, **kw):
@@ -797,8 +796,8 @@ def products_to_logic(products, global_defs):
         e, s = add_process_scheduler(t, pids, player)
         env_safe.append(e)
         sys_safe.append(s)
-    env_safe = _conj(env_safe)
-    sys_safe = _conj(sys_safe)
+    env_safe = conj(env_safe)
+    sys_safe = conj(sys_safe)
     env_prog = [y for x in pids.itervalues()
                 for y in x['progress']['env']]
     sys_prog = [y for x in pids.itervalues()
@@ -1049,10 +1048,10 @@ def graph_to_logic(g, t, pid, max_gid):
         if not oute:
             oute.append('X(False)')
         precond = '({pc} = {i})'.format(pc=pc, i=u)
-        postcond = _disj(oute, sep='\n\t')
+        postcond = disj(oute, sep='\n\t')
         t = '{a} -> ({b})'.format(a=precond, b=postcond)
         c.append(t)
-    return _conj(c, sep='\n')
+    return conj(c, sep='\n')
 
 
 def form_notexe_condition(g, t, pid):
@@ -1063,7 +1062,7 @@ def form_notexe_condition(g, t, pid):
     @rtype: `dict` of `str`
     """
     pc = pid_to_pc(pid)
-    disj = dict()
+    _disj = dict()
     for u in g:
         r = list()
         # at least one outedge always executable ?
@@ -1075,10 +1074,10 @@ def form_notexe_condition(g, t, pid):
             if e == 'True':
                 break
         # u blocks if no executability condition is True
-        disj[u] = _disj(r)
-    return _disj(
+        _disj[u] = disj(r)
+    return disj(
         '({pc} = {u}) & !({b})'.format(pc=pc, u=u, b=b)
-        for u, b in disj.iteritems())
+        for u, b in _disj.iteritems())
 
 
 def graph_to_guards(g, t, pid):
@@ -1104,7 +1103,7 @@ def graph_to_guards(g, t, pid):
                 '(X {aux} = {key}) & '
                 '({guard})').format(
                     pc=pc, aux=aux, u=u, v=v, key=key, guard=e))
-        trans = _disj(r)
+        trans = disj(r)
         # find max outgoing edge multiplicity
         n = max_edge_multiplicity(g, u)
         assert (n == 0) == (not g.succ[u])
@@ -1113,7 +1112,7 @@ def graph_to_guards(g, t, pid):
             '( ( (X {aux}) < {n} ) & ({trans}) )'
             ')'.format(
                 pc=pc, u=u, aux=aux, n=n, trans=trans))
-    return _conj(c)
+    return conj(c)
 
 
 def transform_ltl_blocks(ltl, t):
@@ -1135,12 +1134,12 @@ def transform_ltl_blocks(ltl, t):
         if not e:
             continue
         f, _ = e.to_logic(t, pid='global')
-        c = gr1_fragment.split_gr1(f)
+        c = gr1.split_gr1(f)
         [d[assume][k].extend(v) for k, v in c.iteritems()]
     # conjoin (except for liveness)
     for assume in {'assume', 'assert'}:
         for part in {'init', 'G'}:
-            d[assume][part] = _conj(d[assume][part])
+            d[assume][part] = conj(d[assume][part])
     logger.debug('translated LTL blocks:\n{d}'.format(d=d))
     logger.info('-- done transforming LTL blocks.')
     return d
@@ -1265,7 +1264,7 @@ def constrain_imperative_vars(pids, t, player='sys'):
     if c:
         comment = '\n\n# local imperative var constraints\n'
         s = '{comment}{f}'.format(
-            f=_conj(c, sep='\n'),
+            f=conj(c, sep='\n'),
             comment=comment)
         gl.append(s)
     # globals
@@ -1306,17 +1305,17 @@ def constrain_imperative_vars(pids, t, player='sys'):
                 z.append(array_inv)
         inv = _invariant(flatname, d['dom'], d['length'])
         w = '( ((\t {f}\n) | {invariant}) & ({array_inv}))'.format(
-            f=_disj(b, sep='\n'),
+            f=disj(b, sep='\n'),
             invariant=inv,
-            array_inv=_conj(z, sep='\n'))
+            array_inv=conj(z, sep='\n'))
         c.append(w)
     if c:
         comment = '\n\n# global imperative var constraints\n'
         s = '{comment}{f}'.format(
-            f=_conj(c, sep='\n'),
+            f=conj(c, sep='\n'),
             comment=comment)
         gl.append(s)
-    return _conj(gl)
+    return conj(gl)
 
 
 def _constrain_imperative_var(t, pid, var, edges):
@@ -1333,10 +1332,10 @@ def _constrain_imperative_var(t, pid, var, edges):
     for u, v, key, _ in edges:
         s = edge_str(ps, gid, pc, u, v, aux, key)
         c.append(s)
-    disj = _disj(c, sep='\n\t')
+    _disj = disj(c, sep='\n\t')
     # scalar ?
     if d['length'] is None:
-        return disj, 'True'
+        return _disj, 'True'
     # array elements remain invariant if not referenced
     flatnames = array_to_flatnames(d['flatname'], d['length'])
     a = list()
@@ -1344,16 +1343,16 @@ def _constrain_imperative_var(t, pid, var, edges):
         r = list()
         for i, flat in enumerate(flatnames):
             ys = [e.to_logic(t, pid)[0] for e in indices]
-            conj = _conj('{y} != {i}'.format(y=y, i=i) for y in ys)
+            _conj = conj('{y} != {i}'.format(y=y, i=i) for y in ys)
             inv = _invariant(flat, dom)
-            cond = '({conj}) -> ({inv})'.format(conj=conj, inv=inv)
+            cond = '({conj}) -> ({inv})'.format(conj=_conj, inv=inv)
             r.append(cond)
-        econj = _conj(r)
+        econj = conj(r)
         edge = edge_str(ps, gid, pc, u, v, aux, key)
         cond = '({edge}) -> ({econj})'.format(econj=econj, edge=edge)
         a.append(cond)
-    conj = _conj(a, sep='\n\t')
-    return disj, conj
+    _conj = conj(a, sep='\n\t')
+    return _disj, _conj
 
 
 def find_var_in_scope(name, t, pid):
@@ -1379,7 +1378,7 @@ def find_var_in_scope(name, t, pid):
 
 
 def edge_str(ps, gid, pc, u, v, aux, key):
-    return _conj([
+    return conj([
         'X({ps} = {gid})'.format(ps=ps, gid=gid),
         '({pc} = {u})'.format(pc=pc, u=u),
         'X({pc} = {v})'.format(pc=pc, v=v),
@@ -1412,7 +1411,7 @@ def constrain_local_declarative_vars(t):
             c[var_owner].append(s)
     for k, v in c.iteritems():
         c[k] = '\n\n# declarative var constraints\n{f}'.format(
-            f=_conj(v, sep='\n'))
+            f=conj(v, sep='\n'))
     logger.info('-- done with free local vars.\n')
     return c['env'], c['sys']
 
@@ -1531,9 +1530,9 @@ def add_process_scheduler(t, pids, player):
     # handle process products
     c = list()
     for gid, v in deadlock.iteritems():
-        s = _disj(v)
+        s = disj(v)
         c.append(s)
-    deadlocked = _conj(c, sep='\n')
+    deadlocked = conj(c, sep='\n')
     if player == 'env':
         safety['env'].append(
             '\n# deadlock\n' +
@@ -1548,8 +1547,8 @@ def add_process_scheduler(t, pids, player):
                 ps=ps, max_gid=max_gid))
     logger.info('done with process scheduler.\n')
     return (
-        _conj(safety['env'], sep=2*'\n'),
-        _conj(safety['sys'], sep=2*'\n'))
+        conj(safety['env'], sep=2*'\n'),
+        conj(safety['sys'], sep=2*'\n'))
 
 
 def pid_to_ps(t, pid):
@@ -1627,7 +1626,7 @@ def _invariant(flatname, dom, length=None):
     for ei in array_to_flatnames(flatname, length):
         s = '((X {var}) {op} {var})'.format(var=ei, op=op)
         c.append(s)
-    return _conj(c)
+    return conj(c)
 
 
 def synthesize(code, strict_atomic=True, symbolic=False, **kw):
@@ -1675,7 +1674,7 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     sys_prog = [x for x in sys_prog if x != 'True']
     if not sys_prog:
         sys_prog = list()
-    spc = logic.symbolic.Automaton()
+    spc = _symbolic.Automaton()
     spc.init['env'] = env_init
     spc.init['sys'] = sys_init
     spc.action['env'] = env_safe
@@ -1698,7 +1697,8 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
 
 
 def dump_ltl_to_json(spc):
-    def f(x): return _conj(x).split('\n')
+    def f(x):
+        return conj(x).split('\n')
     dvars = dict()
     for var, d in spc.vars.iteritems():
         b = dict(d)
