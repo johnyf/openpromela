@@ -19,7 +19,8 @@ import psutil
 
 logger = logging.getLogger(__name__)
 slugs_log = logging.getLogger(__name__ + '.slugs')
-SLUGS_SPEC = 'spec_slugs.txt'
+SLUGS_SPEC = 'slugs.txt'
+SLUGS_NICE = 'slugs_readable.txt'
 BDD_FILE = 'bdd.txt'
 
 
@@ -41,6 +42,8 @@ def synthesize(spec, symbolic=True, bddfile=None, make=True):
     # dump for use in manual debugging
     if logger.getEffectiveLevel() < logging.DEBUG:
         with open(SLUGS_SPEC, 'w') as f:
+            f.write(s)
+        with open(SLUGS_NICE, 'w') as f:
             w = textwrap.fill(s, replace_whitespace=False)
             f.write(w)
     # call slugs
