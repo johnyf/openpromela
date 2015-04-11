@@ -282,8 +282,8 @@ def test_bool_eq_number():
 
 
 def test_prefix_parser():
-    parser = openpromela.bdd.PrefixParser()
-    nodes = parser._ast
+    parser = openpromela.bdd.Parser()
+    nodes = parser.nodes
     # &, !
     e = '& x ! y'
     t = parser.parse(e)

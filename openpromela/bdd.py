@@ -55,7 +55,7 @@ class Parser(object):
     def __init__(self, nodes=None):
         if nodes is None:
             nodes = Nodes()
-        self._nodes = nodes
+        self.nodes = nodes
         self.lexer = Lexer()
         self.tokens = self.lexer.tokens
         self._binary = {'AND', 'OR', 'XOR'}
@@ -85,26 +85,26 @@ class Parser(object):
         t = tok.type
         if t == 'NOT':
             x = self._recurse()
-            return self._nodes.Operator('!', x)
+            return self.nodes.Operator('!', x)
         elif t in self._binary:
             op = tok.value
             x = self._recurse()
             y = self._recurse()
-            return self._nodes.Operator(op, x, y)
+            return self.nodes.Operator(op, x, y)
         elif t == 'DOLLAR':
             u = self._recurse()
             assert u.type == 'num', u.type
             n = int(u.value)
             mem = [self._recurse() for i in xrange(n)]
-            return self._nodes.Buffer(mem)
+            return self.nodes.Buffer(mem)
         elif t == 'QUESTION':
             u = self._recurse()
             assert u.type == 'num', u.type
-            return self._nodes.Register(u.value)
+            return self.nodes.Register(u.value)
         elif t == 'NAME':
-            return self._nodes.Var(tok.value)
+            return self.nodes.Var(tok.value)
         elif t == 'NUMBER':
-            return self._nodes.Num(tok.value)
+            return self.nodes.Num(tok.value)
         else:
             raise Exception('Unknown token "{t}"'.format(t=tok))
 
