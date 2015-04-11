@@ -13,7 +13,7 @@ Slugsin syntax:
 from __future__ import absolute_import
 import logging
 import ply.lex
-from logic.ast import Nodes as _Nodes
+from omega.logic.ast import Nodes as _Nodes
 
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 """Interface to `gr1c` synthesizer."""
 from __future__ import absolute_import
-import logic.symbolic
+from omega.symbolic import symbolic
 from openpromela.bdd import Nodes as _Nodes
 from openpromela.bdd import Parser
 from openpromela import bitvector as bv
@@ -11,7 +11,7 @@ _JSON_FILE = 'gr1c_mealy.json'
 
 
 def synthesize(spec):
-    aut = logic.symbolic._bitblast(spec)
+    aut = symbolic._bitblast(spec)
     return aut
 
 

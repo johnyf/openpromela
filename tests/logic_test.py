@@ -21,7 +21,7 @@ logging.getLogger('astutils').setLevel('ERROR')
 
 
 def test_conj():
-    f = logic._conj
+    f = logic.conj
     assert f(['a', 'b']) == '(a) & (b)'
     assert f(['a', 'b', 'c', 'd']) == '((a) & (b)) & ((c) & (d))'
     assert f(['a', 'True']) == 'a'
@@ -34,7 +34,7 @@ def test_conj():
 
 
 def test_disj():
-    f = logic._disj
+    f = logic.disj
     assert f(['a', 'b']) == '(a) | (b)'
     assert f(['a', 'b', 'c', 'd']) == '((a) | (b)) | ((c) | (d))'
     assert f(['a', 'False']) == 'a'

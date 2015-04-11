@@ -1,6 +1,6 @@
 """Interface to Acacia+ synthesizer."""
 from __future__ import absolute_import
-import logic.symbolic
+from omega.symbolic import symbolic
 from openpromela.bdd import Nodes as _Nodes
 from openpromela.bdd import Parser
 from openpromela import bitvector as bv
@@ -13,7 +13,7 @@ OPMAP = {'&': '&&', '|': '||'}
 
 
 def synthesize(spec):
-    aut = logic.symbolic._bitblast(spec)
+    aut = symbolic._bitblast(spec)
     bits = dumps_bits(aut.vars)
     spec = dumps_ltl(aut)
     # TODO: write to files

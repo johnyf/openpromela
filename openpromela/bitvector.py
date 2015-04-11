@@ -15,8 +15,8 @@ from __future__ import absolute_import
 import logging
 import math
 import networkx as nx
-from logic import lexyacc
-from logic.ast import Nodes as _Nodes
+from omega.logic import lexyacc
+from omega.logic.ast import Nodes as _Nodes
 
 
 logger = logging.getLogger(__name__)
