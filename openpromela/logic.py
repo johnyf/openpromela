@@ -624,6 +624,9 @@ class AST(object):
             return (str(self), False)
 
 
+_parser = Parser()
+
+
 class Table(object):
     """Table of variables for synthesis.
 
@@ -1639,8 +1642,7 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     @param strict_atomic: if `True`, then deactivate LTL safety
         properties during atomic execution.
     """
-    parser = Parser()
-    program = parser.parse(code)
+    program = _parser.parse(code)
     global_defs, products, ltl = program.to_table()
     (vartable, env_safe,
      sys_safe, env_prog, sys_prog, max_gids) = \
@@ -1787,5 +1789,4 @@ def command_line_wrapper():
 
 
 if __name__ == '__main__':
-    parser = Parser()
-    yacc.rebuild_table(parser, TABMODULE.split('.')[-1])
+    yacc.rebuild_table(_parser, TABMODULE.split('.')[-1])
