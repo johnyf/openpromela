@@ -30,7 +30,7 @@ def bitblast(f, t):
     @param t: symbol table
     @type t: `dict`
     """
-    tree = parser.parse(f)
+    tree = _parser.parse(f)
     return tree.flatten(t=t)
 
 
@@ -208,19 +208,6 @@ def bitfields_to_ints(bit_state, t):
     return int_state
 
 
-class Parser(lexyacc.Parser):
-    """LTL parser for signed arithmetic with truncation."""
-
-    tabmodule = 'slugsin_parsetab'
-
-    def __init__(self):
-        super(Parser, self).__init__(nodes=Nodes())
-
-    def p_truncator(self, p):
-        """expr : expr TRUNCATE number"""
-        p[0] = self.nodes.Truncator(p[2], p[1], p[3])
-
-
 def make_table(d, env_vars=None):
     """Return symbol table from "simple" `dict`."""
     if env_vars is None:
@@ -330,21 +317,6 @@ class Nodes(_Nodes):
         def flatten(self, *arg, **kw):
             return Nodes.opmap[self.value.lower()]
 
-    class Truncator(_Nodes.Binary):
-        def flatten(self, *arg, **kw):
-            logger.info('[++ flatten "{s}"'.format(s=repr(self)))
-            p = self.operands[0].flatten(*arg, **kw)
-            assert isinstance(p, list), p
-            y = self.operands[1]
-            assert isinstance(y, Nodes.Num), (type(y), y)
-            n = int(y.value)
-            tr = truncate(p, n)
-            # if extended, should not use MSB of truncation
-            tr.append('0')
-            logger.debug('truncation result: {tr}\n'.format(tr=tr))
-            logger.info('--] done flattening truncator.\n')
-            return tr
-
     class Comparator(_Nodes.Comparator):
         def flatten(self, mem=None, *arg, **kw):
             logger.info('flatten "{s}"'.format(s=repr(self)))
@@ -358,6 +330,9 @@ class Nodes(_Nodes):
 
     class Arithmetic(_Nodes.Arithmetic):
         def flatten(self, mem=None, *arg, **kw):
+            if self.operator == '<<>>':
+                return flatten_truncator(
+                    self.operands, mem=mem, *arg, **kw)
             logger.info('flatten "{s}"'.format(s=repr(self)))
             # only for testing purposes
             assert mem is not None, (
@@ -368,7 +343,24 @@ class Nodes(_Nodes):
             return flatten_arithmetic(self.operator, p, q, mem)
 
 
-parser = Parser()
+_parser = lexyacc.Parser(nodes=Nodes())
+
+
+def flatten_truncator(operands, mem=None, *arg, **kw):
+    """Return integer truncated to given width."""
+    logger.info(
+        '++ flatten truncator "{s}"'.format(s=operands))
+    p = operands[0].flatten(mem=mem, *arg, **kw)
+    assert isinstance(p, list), p
+    y = operands[1]
+    assert isinstance(y, Nodes.Num), (type(y), y)
+    n = int(y.value)
+    tr = truncate(p, n)
+    # if extended, should not use MSB of truncation
+    tr.append('0')
+    logger.debug('truncation result: {tr}\n'.format(tr=tr))
+    logger.info('-- done flattening truncator.\n')
+    return tr
 
 
 def flatten_comparator(operator, x, y, mem):

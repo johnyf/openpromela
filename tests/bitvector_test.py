@@ -51,7 +51,7 @@ t = {'a': {'type': 'int',
      'x': {'type': 'int',
            'signed': True,
            'bitnames': ['x@0.0.3', 'x@1']}}
-parser = bv.Parser()
+parser = bv._parser
 
 
 def test_flatten_comparator():
@@ -179,7 +179,6 @@ def test_sign_extension():
          'b': {'type': 'int',
                'signed': True,
                'bitnames': ['b0', 'b1']}}
-    parser = bv.Parser()
     with nt.assert_raises(ValueError):
         bv.sign_extension(['1'], 2)
     with nt.assert_raises(ValueError):
@@ -205,7 +204,6 @@ def test_ite():
     t = {'x': {'type': 'bool'},
          'y': {'type': 'bool'},
          'z': {'type': 'bool'}}
-    parser = bv.Parser()
     p = parser.parse('(ite x, y, z)')
     s = p.flatten(t=t)
     assert s == r, s
@@ -267,7 +265,6 @@ def test_init_to_logic():
 
 
 def test_bool_eq_number():
-    parser = bv.Parser()
     t = dict(x=dict(type='bool', owner='env'))
     # wrong
     s = 'x <-> 0'
