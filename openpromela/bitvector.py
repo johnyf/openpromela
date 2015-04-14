@@ -246,13 +246,15 @@ class Nodes(_Nodes):
         'ite': 'ite',
         'X': '',
         # 'G': '[]', 'F': '<>',
-        '<': '<', '<=': '<=', '=': '=', '>=': '>=', '>': '>', '!=': '!=',
+        '<': '<', '<=': '<=', '=': '=',
+        '>=': '>=', '>': '>', '!=': '!=',
         '+': '+', '-': '-'}
 
     class Operator(_Nodes.Operator):
         def flatten(self, mem=None, *arg, **kw):
             if self.operator != 'ite':
-                return super(Nodes.Operator, self).flatten(mem=mem, *arg, **kw)
+                return super(Nodes.Operator, self).flatten(
+                    mem=mem, *arg, **kw)
             # ternary conditional
             assert self.operator == 'ite'
             x = self.operands[0].flatten(mem=None, *arg, **kw)
@@ -365,7 +367,8 @@ def flatten_truncator(operands, mem=None, *arg, **kw):
 
 def flatten_comparator(operator, x, y, mem):
     """Return flattened comparator formula."""
-    logger.info('++ flatten comparator "{op}" ...'.format(op=operator))
+    logger.info(
+        '++ flatten comparator "{op}" ...'.format(op=operator))
     assert isinstance(x, list)
     assert isinstance(y, list)
     p, q = equalize_width(x, y)
@@ -393,7 +396,8 @@ def flatten_comparator(operator, x, y, mem):
             p, q = q, p
         r = less_than(p, q, mem)
     else:
-        raise ValueError('Unknown operator "{op}"'.format(op=operator))
+        raise ValueError(
+            'unknown operator "{op}"'.format(op=operator))
     if negate:
         r = '! {r}'.format(r=r)
     mem.append(r)
@@ -411,24 +415,30 @@ def inequality(p, q, mem):
 
 def less_than(p, q, mem):
     """Return bitvector propositional formula for '<'"""
-    res, res_mem, carry = adder_subtractor(p, q, add=False, start=len(mem))
+    res, res_mem, carry = adder_subtractor(
+        p, q, add=False, start=len(mem))
     mem.extend(res_mem)
-    return '^ ! ^ {a} {b} {carry}'.format(a=p[-1], b=q[-1], carry=carry)
+    return '^ ! ^ {a} {b} {carry}'.format(
+        a=p[-1], b=q[-1], carry=carry)
 
 
 def flatten_arithmetic(operator, p, q, mem):
     """Return flattened arithmetic expression."""
-    logger.info('++ flatten arithmetic operator "{op}"'.format(op=operator))
+    logger.info(
+        '++ flatten arithmetic operator "{op}"'.format(op=operator))
     assert isinstance(p, list)
     assert isinstance(q, list)
     if operator in {'+', '-'}:
         add = (operator == '+')
-        result, res_mem, _ = adder_subtractor(p, q, add, start=len(mem))
+        result, res_mem, _ = adder_subtractor(
+            p, q, add, start=len(mem))
         mem.extend(res_mem)
     elif operator in {'*', '/', '%'}:
         raise NotImplementedError(
-            'multiplication, division, modulo are not implemened yet.'
-            ' In any case, BDDs are inefficient for representing them.')
+            'multiplication, division, '
+            'modulo are not implemened yet.'
+            ' In any case, BDDs are inefficient for '
+            'representing them.')
     else:
         raise ValueError(
             'Unknown arithmetic operator "{op}"'.format(op=operator))
@@ -476,7 +486,8 @@ def adder_subtractor(x, y, add=True, start=0):
     @type y: `list` of bits
     @param add: if `True` then add, otherwise subtract
     @type add: `bool`
-    @param start: insert first element at this index in memory structure
+    @param start: insert first element at
+        this index in memory structure
     @type start: `int` >= 0
     """
     assert start >= 0
@@ -495,7 +506,8 @@ def adder_subtractor(x, y, add=True, start=0):
         carry = '1'
     mem = list()
     result = list()
-    # use a loop to emphasize the relation between mem, result, carries
+    # use a loop to emphasize the relation
+    # between mem, result, carries
     for i, (a, b) in enumerate(zip(p, q)):
         k = start + 2 * i
         r = k + 1
@@ -504,7 +516,8 @@ def adder_subtractor(x, y, add=True, start=0):
         mem.append('^ ^ {a} {b} {c}'.format(a=a, b=b, c=carry))
         result.append('? {k}'.format(k=k))
         # carry
-        mem.append('| & {a} {b} & ^ {a} {b} {c}'.format(a=a, b=b, c=carry))
+        mem.append(
+            '| & {a} {b} & ^ {a} {b} {c}'.format(a=a, b=b, c=carry))
         carry = '? {r}'.format(r=r)
     assert len(mem) == 2 * len(result)
     logger.debug('mem = {mem}\nres = {res}'.format(
@@ -631,19 +644,22 @@ def ite_connective(a, b, c):
     assert isinstance(b, basestring)
     assert isinstance(c, basestring)
     # local memory buffer
-    return '$ 2 {a} | & {b} ? {i} & {c} ! ? {i}'.format(a=a, b=b, c=c, i=0)
+    return '$ 2 {a} | & {b} ? {i} & {c} ! ? {i}'.format(
+        a=a, b=b, c=c, i=0)
 
 
 def var_to_twos_complement(p, t):
     """Return `list` of bits in two's complement."""
     # little-endian encoding
-    logger.info('++ encode variable "{p}" to 2s complement'.format(p=p))
+    logger.info(
+        '++ encode variable "{p}" to 2s complement'.format(p=p))
     assert_var_in_table(p, t)
     v = t[p]
     # arithmetic operators defined only for integers
     if v['type'] == 'bool':
-        raise TypeError(
-            '2s complement undefined for Boolean variable "{p}"'.format(p=p))
+        raise TypeError((
+            '2s complement undefined for '
+            'Boolean variable "{p}"').format(p=p))
     bits = list(v['bitnames'])
     logger.debug('bits of "{p}": {bits}"'.format(p=p, bits=bits))
     if v['signed']:
@@ -678,7 +694,8 @@ def int_to_twos_complement(s):
 
     @type s: such that `int(s)` is well-defined
     """
-    logger.info('++ convert integer "{s}" to 2s complement'.format(s=s))
+    logger.info(
+        '++ convert integer "{s}" to 2s complement'.format(s=s))
     x = int(s)
     if x >= 0:
         sign_bit = '0'
@@ -710,8 +727,9 @@ def twos_complement_to_int(bits):
 def equalize_width(x, y):
     """Return bitvectors of equal len by applying sign extension."""
     logger.info('++ equalize width...')
-    logger.debug('before equalization:\n\t x = {x}\n\t y = {y}'.format(
-        x=x, y=y))
+    logger.debug(
+        'before equalization:\n\t x = {x}\n\t y = {y}'.format(
+            x=x, y=y))
     n = max(len(x), len(y))
     p = sign_extension(x, n)
     q = sign_extension(y, n)
@@ -736,7 +754,8 @@ def sign_extension(x, n):
     @type x: `list` of `str`
     @type n: `int` with: `len(x) <= n < 32`
     """
-    logger.debug('++ sign extension to {n} bits of: {x}'.format(x=x, n=n))
+    logger.debug(
+        '++ sign extension to {n} bits of: {x}'.format(x=x, n=n))
     assert isinstance(x, list)
     assert n < 32
     m = len(x)
