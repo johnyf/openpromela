@@ -2,6 +2,7 @@
 """Translate Promela to linear temporal logic (LTL)"""
 from __future__ import absolute_import
 import argparse
+import copy
 import json
 import logging
 import pprint
@@ -13,6 +14,7 @@ from promela import ast
 from promela import lex
 from promela import yacc
 from openpromela import bitvector
+from omega.logic import past
 from openpromela import slugs
 from openpromela import _version
 from omega.symbolic import symbolic as _symbolic
@@ -36,13 +38,17 @@ class Lexer(lex.Lexer):
         'sys': 'SYS',
         'free': 'FREE',
         'sync': 'SYNC',
-        'async': 'ASYNC'})
+        'async': 'ASYNC',
+        'S': 'SINCE'})
     operators = list(lex.Lexer.operators)
-    operators.extend(['PRIME'])
-
-    def t_PRIME(self, t):
-        r"\'"
-        return t
+    operators.extend([
+        'PRIME', 'PREVIOUS', 'HISTORICALLY', 'ONCE'])
+    # more token rules
+    t_PRIME = r"\'"
+    t_PREVIOUS = r'\-X'
+    t_HISTORICALLY = r'\-\[\]'
+    t_ONCE = r'\-\<\>'
+    t_SINCE = r'S'
 
 
 class Parser(yacc.Parser):
@@ -56,9 +62,8 @@ class Parser(yacc.Parser):
         ('left', 'IMPLIES', 'EQUIV'),
         ('left', 'LOR'),
         ('left', 'LAND'),
-        ('left', 'ALWAYS', 'EVENTUALLY'),
-        ('left', 'UNTIL', 'WEAK_UNTIL', 'RELEASE'),
-        ('right', 'NEXT'),
+        ('left', 'ALWAYS', 'EVENTUALLY', 'HISTORICALLY', 'ONCE'),
+        ('left', 'UNTIL', 'WEAK_UNTIL', 'RELEASE', 'SINCE'),
         ('left', 'OR'),
         ('left', 'XOR'),
         ('left', 'AND'),
@@ -69,6 +74,7 @@ class Parser(yacc.Parser):
         ('left', 'TIMES', 'DIVIDE', 'MOD'),
         ('left', 'INCR', 'DECR'),
         ('right', 'LNOT', 'NOT', 'UMINUS', 'NEG'),  # LNOT is also SND
+        ('right', 'NEXT', 'PREVIOUS'),
         ('left', 'PRIME'),  # this is the only addition
         ('left', 'DOT'),
         ('left', 'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET'))
@@ -194,6 +200,25 @@ class Parser(yacc.Parser):
     def p_expr_primed(self, p):
         """expr : expr PRIME"""
         p[0] = self.ast.Next('X', p[1])
+
+    def p_expr_postfix_previous(self, p):
+        """expr : expr PERIOD %prec PREVIOUS"""
+        p[0] = self.ast.Unary('-X', p[1])
+
+    def p_var_postfix_previous(self, p):
+        """cmpnd : cmpnd PERIOD %prec PREVIOUS"""
+        p[0] = self.ast.Unary('-X', p[1])
+
+    def p_expr_past_ltl_unary(self, p):
+        """expr : PREVIOUS expr
+                | HISTORICALLY expr
+                | ONCE expr
+        """
+        p[0] = self.ast.Unary(p[1], p[2])
+
+    def p_expr_past_ltl_binary(self, p):
+        """expr : expr SINCE expr"""
+        p[0] = self.ast.Binary(p[1], p[3])
 
 
 class AST(object):
@@ -1680,14 +1705,17 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     sys_prog = [x for x in sys_prog if x != 'True']
     if not sys_prog:
         sys_prog = list()
+    # bundle
     spc = _symbolic.Automaton()
+    spc.vars = t
     spc.init['env'] = env_init
     spc.init['sys'] = sys_init
     spc.action['env'] = env_safe
     spc.action['sys'] = sys_safe
     spc.win['env'] = env_prog
     spc.win['sys'] = sys_prog
-    spc.vars = t
+    # past -> future LTL
+    spc = map_to_future(spc)
     # dump table and spec to file
     s = (
         '{spc}\n\n'
@@ -1699,7 +1727,35 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     logger.info(s)
     if logger.getEffectiveLevel() < logging.DEBUG:
         dump_ltl_to_json(spc)
-    return slugs.synthesize(spc, symbolic=symbolic, **kw)
+    mealy = slugs.synthesize(spc, symbolic=symbolic, **kw)
+    return mealy
+
+
+def map_to_future(aut):
+    """Translate `Automaton` from full to future FOTL."""
+    a = _symbolic.Automaton()
+    a.vars = copy.deepcopy(aut.vars)
+    for q in ('env', 'sys'):
+        # init
+        init_dvars, i, f = past.map_translate(
+            aut.init[q], aut.vars)
+        a.vars.update(init_dvars)
+        # a.init[q].extend(i)
+        # "previous" in init over-writes anchoring semantics
+        a.init[q].extend(f)
+        # action
+        dvars, i, f = past.map_translate(
+            aut.action[q], aut.vars, free_init=init_dvars)
+        a.vars.update(dvars)
+        a.init[q].extend(i)
+        a.action[q].extend(f)
+        # win
+        dvars, i, f = past.map_translate(
+            aut.win[q], aut.vars, free_init=init_dvars)
+        a.vars.update(dvars)
+        a.init[q].extend(i)
+        a.win[q].extend(f)
+    return a
 
 
 def dump_ltl_to_json(spc):
