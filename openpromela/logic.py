@@ -9,7 +9,9 @@ import textwrap
 import warnings
 import networkx as nx
 from networkx.utils import misc
-from promela import ast, lex, yacc
+from promela import ast
+from promela import lex
+from promela import yacc
 from openpromela import bitvector
 from openpromela import slugs
 from openpromela import _version
@@ -1733,27 +1735,27 @@ def command_line_wrapper():
             'openpromela.bitvector'}
     slugs_log_name = 'openpromela.bitvector.slugs'
     debug_log_file = 'debug_log.txt'
-    parser = argparse.ArgumentParser(
+    p = argparse.ArgumentParser(
         description=(
             'Synthesizer from open Promela.\n\n'
             'Beware: unstable version:\n'
             'options may change.\n'))
-    parser.add_argument('fname', help='Promela input file')
-    parser.add_argument(
+    p.add_argument('fname', help='Promela input file')
+    p.add_argument(
         '-s', '--symbolic', action='store_true',
         help='represent strategy with BDD, instead of enumerated graph')
-    parser.add_argument(
+    p.add_argument(
         '-r', '--realizability', action='store_true',
         help='check only for realizability')
-    parser.add_argument(
+    p.add_argument(
         '--pdf', action='store_true',
         help='dump Mealy graph to file as PDF')
-    parser.add_argument(
+    p.add_argument(
         '-d', '--debug', type=int, default=logging.WARNING,
         help='set python logging level. Dump log files if below DEBUG.')
-    parser.add_argument(
-        '--version', action='version', version=version.version)
-    args = parser.parse_args()
+    p.add_argument(
+        '--version', action='version', version=_version.version)
+    args = p.parse_args()
     level = args.debug
     fh = logging.FileHandler(debug_log_file, mode='w')
     for name in logs:
