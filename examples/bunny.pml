@@ -1,5 +1,7 @@
+#define H 3
+
 free env int(1, 2) xt;
-env int(0, 2) yt;
+env int(0, H) yt;
 
 assume active env proctype taz(){
     do
@@ -9,12 +11,10 @@ assume active env proctype taz(){
     od
 }
 
-assume ltl {
-    []((xt != 1) || (yt != 2)) &&
-    []<>(yt == 0) }
+assume ltl { []<>(yt == 0) }
 
 sys int(0, 3) x;
-sys int(0, 2) y;
+sys int(0, H) y;
 
 assert active sys proctype bunny(){
     do
@@ -28,4 +28,6 @@ assert active sys proctype bunny(){
 
 assert ltl {
     [] ! ((x == xt) && (y == yt)) &&
+    /* [] ! --X ((xt' == x ) && (yt' == y )) && */
+    [] -X ! ((xt' == x) && (yt' == y)) &&
     []<>((x == 3) && (y == 1)) }
