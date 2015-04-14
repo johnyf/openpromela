@@ -1,7 +1,7 @@
 build/*
 dist/*
 slugs/*
-openpromela/version.py
+openpromela/_version.py
 *parsetab.py
 .coverage
 *.patch

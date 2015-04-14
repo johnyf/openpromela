@@ -5,7 +5,7 @@ from setuptools import setup
 description = (
     'Generalized reactive(1) synthesis from Promela specifications.')
 README = 'README.md'
-VERSION_FILE = 'openpromela/version.py'
+VERSION_FILE = 'openpromela/_version.py'
 MAJOR = 0
 MINOR = 0
 MICRO = 1
