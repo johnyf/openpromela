@@ -10,7 +10,9 @@ import warnings
 import networkx as nx
 from networkx.utils import misc
 from promela import ast, lex, yacc
-from openpromela import bitvector, version, slugs
+from openpromela import bitvector
+from openpromela import slugs
+from openpromela import _version
 from omega.symbolic import symbolic as _symbolic
 from omega import gr1
 from omega.logic.syntax import conj, disj
