@@ -18,6 +18,16 @@ Filippidis I., Murray R.M., Holzmann G.J.;
 [Synthesis from multi-paradigm specifications](http://resolver.caltech.edu/CaltechCDSTR:2015.003), California Institute of Technology, Pasadena, CA, 2015 (CDSTR:2015.003)
 
 
+Usage
+=====
+
+The package can be used both as a library and from the command line. A script named `ospin` is created as entry point. It is placed where `setuptools` installs new executables, e.g., whre `python` itself resides. To learn how to use the script, invoke it with:
+
+```
+ospin --help
+```
+
+
 Installation
 ============
 
