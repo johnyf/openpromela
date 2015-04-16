@@ -776,7 +776,9 @@ def products_to_logic(products, global_defs):
     t = Table()
     add_variables_to_table(t, global_defs, pid='global', assume_context='sys')
     proctypes, max_gids = flatten_products(products, t)
-    pids = add_processes(proctypes, max_gids, t)
+    # find the players with atomic statements
+    atomic = who_has_atomic(proctypes)
+    pids = add_processes(proctypes, max_gids, atomic, t)
     # find number of keys needed
     # in sync prod multiple program graphs mv simultaneously
     n_keys = dict(env=dict(env=1), sys=dict(env=1, sys=1))
@@ -825,7 +827,7 @@ def products_to_logic(products, global_defs):
     env_safe = [env_imp, env_decl]
     sys_safe = [sys_imp, sys_decl]
     for player in {'env', 'sys'}:
-        e, s = add_process_scheduler(t, pids, player)
+        e, s = add_process_scheduler(t, pids, player, atomic)
         env_safe.append(e)
         sys_safe.append(s)
     env_safe = conj(env_safe)
@@ -835,7 +837,7 @@ def products_to_logic(products, global_defs):
     sys_prog = [y for x in pids.itervalues()
                 for y in x['progress']['sys']]
     return (t, env_safe, sys_safe,
-            env_prog, sys_prog, max_gids)
+            env_prog, sys_prog, max_gids, atomic)
 
 
 def flatten_products(products, t):
@@ -902,7 +904,22 @@ def max_edge_multiplicity(g, n=None):
     return max(len(uv) for u in nbunch for v, uv in g.succ[u].iteritems())
 
 
-def add_processes(proctypes, max_gids, t):
+def who_has_atomic(proctypes):
+    d = dict(env=0, sys=0)
+    for g, gid, lid in proctypes:
+        assume = g.assume
+        if has_atomic(g):
+            d[assume] += 1
+    return {k: (v > 0) for k, v in d.iteritems()}
+
+
+def has_atomic(g):
+    """Return `True` if graph `g` contains an atomic block."""
+    return any(d['context'] == 'atomic'
+               for u, d in g.nodes_iter(data=True))
+
+
+def add_processes(proctypes, max_gids, atomic, t):
     """Instantiate processes for each proctype in `proctypes`."""
     # instantiate each proctype
     pids = dict()
@@ -911,20 +928,21 @@ def add_processes(proctypes, max_gids, t):
         for j in xrange(g.active):
             logger.info('\t instance {j}'.format(j=j))
             max_gid = max_gids[g.assume]
-            process_to_logic(gid, lid, g, t, max_gid, pids)
-        logger.info('-- done with proctype "{name}".\n'.format(name=g.name))
+            process_to_logic(gid, lid, g, t, max_gid, atomic, pids)
+        logger.info(
+            '-- done with proctype "{name}".\n'.format(name=g.name))
     return pids
 
 
 # a process is an instance of a proctype
-def process_to_logic(gid, lid, g, t, max_gid, pids):
+def process_to_logic(gid, lid, g, t, max_gid, atomic, pids):
     pid = t.add_pid(g.name, g.owner, gid, lid, assume=g.assume)
     pc = pid_to_pc(pid)
     add_variables_to_table(t, g.locals, pid, g.assume)
     # create graph annotated with formulae
     h = nx.MultiDiGraph()
     var2edges = add_edge_formulae(h, g, t, pid)
-    trans = graph_to_logic(h, t, pid, max_gid)
+    trans = graph_to_logic(h, t, pid, max_gid, atomic)
     notexe = form_notexe_condition(g, t, pid)
     progress = collect_progress_labels(g, t, pid)
     t.add_program_counter(pid, len(h), g.owner, g.root)
@@ -1036,7 +1054,7 @@ def collect_progress_labels(g, t, pid):
     return progress
 
 
-def graph_to_logic(g, t, pid, max_gid):
+def graph_to_logic(g, t, pid, max_gid, atomic):
     """Return temporal logic formula encoding edges.
 
     The graph vertices must be integers.
@@ -1048,35 +1066,25 @@ def graph_to_logic(g, t, pid, max_gid):
     dpid = t.pids[pid]
     assume = dpid['assume']
     gid = dpid['gid']
-    pm = pm_str(assume)
+    has_exclusive_vars = atomic[assume]
     c = list()
     for u, du in g.nodes_iter(data=True):
         assert isinstance(u, int), u
         oute = list()
         for u_, v, key, d in g.out_edges_iter(u, data=True, keys=True):
             assert isinstance(v, int)
-            v_context = g.node[v]['context']
-            if v_context is None:
-                exclusive = ((
-                    '((X ex_{assume} = {max_gid}) & (X ! {pm}))').format(
-                        assume=assume,
-                        max_gid=max_gid,
-                        pm=pm))
-            elif v_context == 'atomic':
-                exclusive = ((
-                    '((X ex_{assume} = {gid}) & (X {pm}))').format(
-                        assume=assume,
-                        gid=gid,
-                        pm=pm))
-            else:
-                raise Exception('Found context: {c}'.format(c=v_context))
             alt = 'X(({pc} = {j}) & ({aux} = {k}))'.format(
                 pc=pc, j=v, aux=aux, k=key)
-            f = d.get('formula')
-            if f is not None:
-                alt = '{t} & ({f}) & {exclusive}'.format(
-                    t=alt, f=f, exclusive=exclusive)
-            oute.append(alt)
+            a = [alt]
+            if 'formula' in d:
+                a.append(d['formula'])
+            if has_exclusive_vars:
+                v_context = g.node[v]['context']
+                exclusive = form_exclusive_expr(
+                    v_context, assume, gid, max_gid)
+                a.append(exclusive)
+            b = conj(a)
+            oute.append(b)
         if not oute:
             oute.append('X(False)')
         precond = '({pc} = {i})'.format(pc=pc, i=u)
@@ -1084,6 +1092,27 @@ def graph_to_logic(g, t, pid, max_gid):
         t = '{a} -> ({b})'.format(a=precond, b=postcond)
         c.append(t)
     return conj(c, sep='\n')
+
+
+def form_exclusive_expr(context, assume, gid, max_gid):
+    """Return assignment to exclusive execution variables."""
+    ex = 'ex_' + assume
+    pm = pm_str(assume)
+    if context is None:
+        exclusive = (
+            '((X {ex} = {max_gid}) & (X ! {pm}))').format(
+                ex=ex,
+                max_gid=max_gid,
+                pm=pm)
+    elif context == 'atomic':
+        exclusive = (
+            '((X {ex} = {gid}) & (X {pm}))').format(
+                ex=ex,
+                gid=gid,
+                pm=pm)
+    else:
+        raise Exception('Found context: {c}'.format(c=context))
+    return exclusive
 
 
 def form_notexe_condition(g, t, pid):
@@ -1448,7 +1477,7 @@ def constrain_local_declarative_vars(t):
     return c['env'], c['sys']
 
 
-def add_process_scheduler(t, pids, player):
+def add_process_scheduler(t, pids, player, atomic):
     logger.info('adding process scheduler...')
     assert player in {'env', 'sys'}
     # env controls both selectors:
@@ -1512,13 +1541,15 @@ def add_process_scheduler(t, pids, player):
             '({nexe}) -> (X {ps} != {gid})').format(
                 nexe=blocks_if, ps=ps, gid=gid))
         deadlock.setdefault(gid, list()).append(blocks_if)
-        # grant exclusive execution to requestor if executable
-        ex = 'ex_{assume}'.format(assume=assume)
-        safety['env'].append((
-            '\n# grant request for exclusive execution\n'
-            '( (({ex} = {gid}) & !({nexe})) -> '
-            '(X {ps} = {gid}) )').format(
-                ex=ex, gid=gid, nexe=blocks_if, ps=ps))
+        # if the player has any atomic blocks
+        if atomic[player]:
+            # grant exclusive execution to requestor if executable
+            ex = 'ex_{assume}'.format(assume=assume)
+            safety['env'].append((
+                '\n# grant request for exclusive execution\n'
+                '( (({ex} = {gid}) & !({nexe})) -> '
+                '(X {ps} = {gid}) )').format(
+                    ex=ex, gid=gid, nexe=blocks_if, ps=ps))
     # player has no processes ?
     if not gids:
         return ('', '')
@@ -1530,17 +1561,18 @@ def add_process_scheduler(t, pids, player):
     t.add_var(pid='global', name=ps, flatname=ps,
               dom=ps_dom, dtype='saturating', free=True, owner='env')
     # define "exclusive" variables for requesting atomic execution
-    ex = 'ex_{player}'.format(player=player)
-    ex_dom = ps_dom
-    t.add_var(pid='aux', name=ex, flatname=ex,
-              dom=ex_dom, dtype='saturating', free=True, owner=player,
-              init=max_gid)
-    # define preemption variables for atomic execution
-    # that stops also the other player
-    pm = pm_str(player)
-    t.add_var(pid='aux', name=pm, flatname=pm,
-              dom='boolean', dtype='boolean', free=True, owner=player,
-              init='false')
+    if atomic[player]:
+        ex = 'ex_{player}'.format(player=player)
+        ex_dom = ps_dom
+        t.add_var(pid='aux', name=ex, flatname=ex,
+                  dom=ex_dom, dtype='saturating', free=True, owner=player,
+                  init=max_gid)
+        # define preemption variables for atomic execution
+        # that stops also the other player
+        pm = pm_str(player)
+        t.add_var(pid='aux', name=pm, flatname=pm,
+                  dom='boolean', dtype='boolean', free=True, owner=player,
+                  init='false')
     # last value means deadlock
     if max_gid:
         if player == 'sys':
@@ -1549,11 +1581,17 @@ def add_process_scheduler(t, pids, player):
                 '(X {ps} != {max_gid})\n').format(ps=ps, max_gid=max_gid))
         elif player == 'env':
             other_player = 'sys'
-            pm_env = pm_str(other_player)
-            safety[player].append((
-                '\n\n# never deadlock, unless preempted by sys:\n'
-                '((X {ps} = {max_gid}) <-> {pm})\n').format(
-                    ps=ps, max_gid=max_gid, pm=pm_env))
+            pm_sys = pm_str(other_player)
+            if atomic['sys']:
+                safety[player].append((
+                    '\n\n# never deadlock, unless preempted by sys:\n'
+                    '((X {ps} = {max_gid}) <-> {pm})\n').format(
+                        ps=ps, max_gid=max_gid, pm=pm_sys))
+            else:
+                safety[player].append((
+                    '\n\n# never deadlock:\n'
+                    '(X {ps} != {max_gid})\n').format(
+                        ps=ps, max_gid=max_gid))
         else:
             raise Exception('Unknown player "{player}"'.format(player=player))
     # if all processes block, signal deadlock
@@ -1670,7 +1708,7 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     program = _parser.parse(code)
     global_defs, products, ltl = program.to_table()
     (vartable, env_safe,
-     sys_safe, env_prog, sys_prog, max_gids) = \
+     sys_safe, env_prog, sys_prog, max_gids, atomic) = \
         products_to_logic(products, global_defs)
     ltl_spc = transform_ltl_blocks(ltl, vartable)
     t = vartable.flatten()
@@ -1682,7 +1720,11 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     sys_ltl_safe = ltl_spc['assert']['G']
     sys_ltl_prog = ltl_spc['assert']['GF']
     # deactivate LTL safety during atomic transitions ?
-    if strict_atomic and 'ex_sys' in vartable.scopes['aux']:
+    deactivate = (
+        atomic['sys'] and
+        strict_atomic and
+        'ex_sys' in vartable.scopes['aux'])
+    if deactivate:
         env_ltl_safe = (
             '( (pm_sys & ((X sys_ps) = ex_sys) &'
             ' (ex_sys < {max_gid})) | {safe})').format(
