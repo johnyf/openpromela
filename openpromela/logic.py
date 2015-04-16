@@ -287,7 +287,8 @@ class AST(object):
                 body='\n'.join(ast.to_str(x) for x in self.body))
 
     class Proctype(ast.Proctype):
-        def __init__(self, name, body, owner=None, assume=None, **kw):
+        def __init__(self, name, body, owner=None, assume=None,
+                     active=None, **kw):
             if owner is None and assume is not None:
                 owner = 'env' if assume == 'assume' else 'sys'
             if owner is None:
@@ -306,7 +307,11 @@ class AST(object):
             assert assume == 'sys' or owner == 'env', (
                 "Assumption with program counter owned by sys "
                 "requires support for 'previous' operator in solver.")
-            super(AST.Proctype, self).__init__(name, body, **kw)
+            # different default than Promela
+            if active is None:
+                active = AST.Integer('1')
+            super(AST.Proctype, self).__init__(
+                name=name, body=body, active=active, **kw)
 
         def to_str(self):
             return (
