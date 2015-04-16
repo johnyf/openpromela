@@ -774,7 +774,8 @@ def array_to_flatnames(flatname, length):
 
 def products_to_logic(products, global_defs):
     t = Table()
-    add_variables_to_table(t, global_defs, pid='global', assume_context='sys')
+    add_variables_to_table(t, global_defs,
+                           pid='global', assume_context='sys')
     proctypes, max_gids = flatten_products(products, t)
     # find the players with atomic statements
     atomic = who_has_atomic(proctypes)
@@ -901,7 +902,8 @@ def max_edge_multiplicity(g, n=None):
         nbunch = [n]
     else:
         nbunch = g
-    return max(len(uv) for u in nbunch for v, uv in g.succ[u].iteritems())
+    return max(len(uv) for u in nbunch
+               for v, uv in g.succ[u].iteritems())
 
 
 def who_has_atomic(proctypes):
