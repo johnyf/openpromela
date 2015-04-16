@@ -780,8 +780,8 @@ def products_to_logic(products, global_defs):
     atomic = who_has_atomic(proctypes)
     pids = add_processes(proctypes, max_gids, atomic, t)
     # find number of keys needed
-    # in sync prod multiple program graphs mv simultaneously
-    n_keys = dict(env=dict(env=1), sys=dict(env=1, sys=1))
+    # in sync product multiple program graphs mv simultaneously
+    n_keys = dict(env=dict(env=0), sys=dict(env=0, sys=0))
     for p in products:
         if isinstance(p, AST.Product):
             proc = next(iter(p.body))
