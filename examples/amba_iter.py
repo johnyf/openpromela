@@ -9,7 +9,7 @@ from openpromela import logic
 
 
 INPUT_FILE = 'amba.pml'
-SLUGS_LOG = 'openpromela.bitvector.slugs'
+SLUGS_LOG = 'openpromela.slugs.slugs'
 LOG_FILE = 'amba_log.txt'
 DEBUG = False  # for this script only
 N = 2
