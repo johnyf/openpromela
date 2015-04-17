@@ -42,12 +42,13 @@ class Lexer(lex.Lexer):
         'S': 'SINCE'})
     operators = list(lex.Lexer.operators)
     operators.extend([
-        'PRIME', 'PREVIOUS', 'HISTORICALLY', 'ONCE'])
+        'PRIME', 'PREVIOUS', 'WEAK_PREVIOUS', 'HISTORICALLY', 'ONCE'])
     # more token rules
     t_PRIME = r"\'"
-    t_PREVIOUS = r'\-X'
-    t_HISTORICALLY = r'\-\[\]'
-    t_ONCE = r'\-\<\>'
+    t_PREVIOUS = r'--X'
+    t_WEAK_PREVIOUS = r'-X'
+    t_HISTORICALLY = r'-\[\]'
+    t_ONCE = r'-\<\>'
     t_SINCE = r'S'
 
 
@@ -74,7 +75,7 @@ class Parser(yacc.Parser):
         ('left', 'TIMES', 'DIVIDE', 'MOD'),
         ('left', 'INCR', 'DECR'),
         ('right', 'LNOT', 'NOT', 'UMINUS', 'NEG'),  # LNOT is also SND
-        ('right', 'NEXT', 'PREVIOUS'),
+        ('right', 'NEXT', 'PREVIOUS', 'WEAK_PREVIOUS'),
         ('left', 'PRIME'),  # this is the only addition
         ('left', 'DOT'),
         ('left', 'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET'))
@@ -211,6 +212,7 @@ class Parser(yacc.Parser):
 
     def p_expr_past_ltl_unary(self, p):
         """expr : PREVIOUS expr
+                | WEAK_PREVIOUS expr
                 | HISTORICALLY expr
                 | ONCE expr
         """
