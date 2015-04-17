@@ -17,6 +17,7 @@ from openpromela import bitvector
 from omega.logic import past
 from openpromela import slugs
 from openpromela import _version
+from omega.logic import prime
 from omega.symbolic import symbolic as _symbolic
 from omega import gr1
 from omega.logic.syntax import conj, disj
@@ -302,13 +303,6 @@ class AST(object):
             assert assume in {'assume', 'assert'}
             assume = 'env' if assume == 'assume' else 'sys'
             self.assume = assume
-            # env can't see next value of a program counter
-            # controlled by sys, so an assumption process must
-            # have pc controlled by env
-            # (until a "previous" operator becomes available)
-            assert assume == 'sys' or owner == 'env', (
-                "Assumption with program counter owned by sys "
-                "requires support for 'previous' operator in solver.")
             # different default than Promela
             if active is None:
                 active = AST.Integer('1')
@@ -793,7 +787,7 @@ def products_to_logic(products, global_defs):
     pids = add_processes(proctypes, max_gids, atomic, t)
     # find number of keys needed
     # in sync product multiple program graphs mv simultaneously
-    n_keys = dict(env=dict(env=0), sys=dict(env=0, sys=0))
+    n_keys = dict(env=dict(env=0, sys=0), sys=dict(env=0, sys=0))
     for p in products:
         if isinstance(p, AST.Product):
             proc = next(iter(p.body))
@@ -831,7 +825,7 @@ def products_to_logic(products, global_defs):
                 dom = (0, max_key)
                 t.add_var(pid='global', name=var, flatname=var,
                           dom=dom, dtype='saturating', free=True,
-                          owner=owner, init=0)
+                          owner=owner)
     # assemble spec
     env_imp = constrain_imperative_vars(pids, t, 'env')
     sys_imp = constrain_imperative_vars(pids, t, 'sys')
@@ -965,17 +959,25 @@ def process_to_logic(gid, lid, g, t, max_gid, atomic, pids):
     notexe = form_notexe_condition(g, t, pid)
     progress = collect_progress_labels(g, t, pid)
     t.add_program_counter(pid, len(h), g.owner, g.root)
-    if g.assume == 'sys' and g.owner == 'env':
+    # add "next value" program counter
+    if g.assume == 'env' and g.owner == 'sys':
+        pc_next = pid_to_pc_next(pid, g.assume, g.owner)
+        t.add_program_counter(pid, len(h), g.owner, init=None, pc=pc_next)
+    # control flow constraints
+    if g.assume != g.owner:
         pcmust = graph_to_guards(g, t, pid)
+        pc_next_init = initialize_pc_next(g, t, pid)
     else:
         pcmust = None
+        pc_next_init = None
     # add to dict of pids
     d = dict(
         trans=trans,  # data flow
         progress=progress,  # progress labels
         var2edges=var2edges,  # imperative var deconstraining
         notexe=notexe,  # blocked
-        pcmust=pcmust)  # control flow
+        pcmust=pcmust,  # control flow
+        pc_next_init=pc_next_init)
     pids[pid] = d
     logger.debug('transitions of process "{pc}":\n {t}'.format(
                  pc=pc, t=trans))
@@ -1083,18 +1085,23 @@ def graph_to_logic(g, t, pid, max_gid, atomic):
     aux = pid_to_key(t, pid)
     dpid = t.pids[pid]
     assume = dpid['assume']
+    pc_owner = dpid['owner']
     gid = dpid['gid']
     has_exclusive_vars = atomic[assume]
     pc = pid_to_pc(pid)
+    pc_next = pid_to_pc_next(pid, assume, pc_owner)
     c = list()
     for u, du in g.nodes_iter(data=True):
         assert isinstance(u, int), u
         oute = list()
         for u_, v, key, d in g.out_edges_iter(u, data=True, keys=True):
             assert isinstance(v, int)
-            alt = 'X(({pc} = {j}) & ({aux} = {k}))'.format(
-                pc=pc, j=v, aux=aux, k=key)
-            a = [alt]
+            edge = '(({pc_next} = {j}) & ({aux} = {k}))'.format(
+                pc_next=pc_next, j=v, aux=aux, k=key)
+            # prime ?
+            if not (assume == 'env' and pc_owner == 'sys'):
+                edge = '(X {edge})'.format(edge=edge)
+            a = [edge]
             if 'formula' in d:
                 a.append(d['formula'])
             if has_exclusive_vars:
@@ -1161,38 +1168,78 @@ def form_notexe_condition(g, t, pid):
 
 
 def graph_to_guards(g, t, pid):
-    """Require that selected edge is executable.
-
-    Only used for assertions with pc controlled by env.
-    (so for model/module (LTL) checking)
-    """
-    assert g.owner == 'env', g.owner
-    assert g.assume == 'sys', g.assume
+    """Require that the selected edge be executable."""
+    assert g.owner != g.assume, (g.owner, g.assume)
+    flatvars = t.flatten()
+    varmap = {var: '(X {var})'.format(var=var) for var in flatvars}
     aux = pid_to_key(t, pid)
     pc = pid_to_pc(pid)
+    pc_next = pid_to_pc_next(pid, g.assume, g.owner)
     c = list()
     # transition relation for pc owner to select only
     # executable edges
     # prevent pc owner from seleting inexistent edges
     for u in g:
-        r = list()
-        for _, v, key, d in g.edges_iter(u, keys=True, data=True):
-            e = d.get('stmt').to_guard(t, pid, g.assume)
-            r.append((
-                '(X {pc} = {v}) & '
-                '(X {aux} = {key}) & '
-                '({guard})').format(
-                    pc=pc, aux=aux, u=u, v=v, key=key, guard=e))
-        trans = disj(r)
         # find max outgoing edge multiplicity
         n = max_edge_multiplicity(g, u)
         assert (n == 0) == (not g.succ[u])
-        c.append(
-            '( ({pc} = {u}) -> '
-            '( ( (X {aux}) < {n} ) & ({trans}) )'
-            ')'.format(
-                pc=pc, u=u, aux=aux, n=n, trans=trans))
+        # collect blocking conditions
+        guards = list()
+        r = list()
+        for _, v, key, d in g.edges_iter(u, keys=True, data=True):
+            stmt = d['stmt']
+            e = stmt.to_guard(t, pid, g.assume)
+            # assume sys ? -> primed the guard
+            if g.assume == 'env' and g.owner == 'sys':
+                e = prime.prime_expr(e, varmap)
+            guards.append(e)
+            r.append((
+                '(X ({pc_next} = {v})) & '
+                '(X ({aux} = {key})) & '
+                '({guard})').format(
+                    pc_next=pc_next, aux=aux,
+                    v=v, key=key, guard=e))
+        trans = disj(r)
+        # selected out-edge must be unblocked
+        post = '( ((X {aux}) < {n}) & ({trans}) )'.format(
+            pc=pc, u=u, aux=aux, n=n, trans=trans)
+        # if at that pc location
+        if g.assume == 'env' and g.owner == 'sys':
+            # sys has to eval primed "blocked" expressions
+            # because env will decide in next time step
+            # whether to select proc to execute, if not blocked
+            unblocked = disj(guards)
+            s = '( (X ({pc} = {u})) -> ({unblocked} -> {post}) )'.format(
+                pc=pc, u=u, unblocked=unblocked, post=post)
+        else:
+            s = '( ({pc} = {u}) -> {post} )'.format(
+                pc=pc, u=u, post=post)
+        c.append(s)
     return conj(c)
+
+
+def initialize_pc_next(g, t, pid):
+    root = g.root
+    pc_next = pid_to_pc_next(pid, g.assume, g.owner)
+    aux = pid_to_key(t, pid)
+    r = list()
+    guards = list()
+    for u, v, key, d in g.edges_iter(root, keys=True, data=True):
+        assert u == root, (u, root)
+        stmt = d['stmt']
+        e = stmt.to_guard(t, pid, g.assume)
+        guards.append(e)
+        r.append((
+            '(({pc_next} = {v}) & '
+            '({aux} = {key}) & '
+            '({guard}))').format(
+                pc_next=pc_next, aux=aux,
+                v=v, key=key, guard=e))
+    # sys doesn't lose if "assume sys" root has no out-edges
+    unblocked = disj(guards)
+    trans = disj(r)
+    return '(({unblocked}) -> ({trans}))'.format(
+        unblocked=unblocked, trans=trans)
 
 
 def transform_ltl_blocks(ltl, t):
@@ -1403,7 +1450,10 @@ def _constrain_imperative_var(t, pid, var, edges):
         'the edges for "{var}" are: {e}'.format(var=var, e=edges))
     assert edges
     dpid = t.pids[pid]
+    assume = dpid['assume']
+    owner = dpid['owner']
     pc = pid_to_pc(pid)
+    pc_next = pid_to_pc_next(pid, assume, owner)
     ps = pid_to_ps(t, pid)
     gid = dpid['gid']
     aux = pid_to_key(t, pid)
@@ -1411,7 +1461,7 @@ def _constrain_imperative_var(t, pid, var, edges):
     dom = d['dom']
     c = list()
     for u, v, key, _ in edges:
-        s = edge_str(ps, gid, pc, u, v, aux, key)
+        s = edge_str(ps, gid, pc, pc_next, u, v, aux, key, assume, owner)
         c.append(s)
     _disj = disj(c, sep='\n\t')
     # scalar ?
@@ -1429,7 +1479,7 @@ def _constrain_imperative_var(t, pid, var, edges):
             cond = '({conj}) -> ({inv})'.format(conj=_conj, inv=inv)
             r.append(cond)
         econj = conj(r)
-        edge = edge_str(ps, gid, pc, u, v, aux, key)
+        edge = edge_str(ps, gid, pc, pc_next, u, v, aux, key, assume, owner)
         cond = '({edge}) -> ({econj})'.format(econj=econj, edge=edge)
         a.append(cond)
     _conj = conj(a, sep='\n\t')
@@ -1458,12 +1508,19 @@ def find_var_in_scope(name, t, pid):
     return d
 
 
-def edge_str(ps, gid, pc, u, v, aux, key):
-    return conj([
-        'X({ps} = {gid})'.format(ps=ps, gid=gid),
-        '({pc} = {u})'.format(pc=pc, u=u),
-        'X({pc} = {v})'.format(pc=pc, v=v),
-        'X({aux} = {k})'.format(aux=aux, k=key)])
+def edge_str(ps, gid, pc, pc_next, u, v, aux, key, assume, owner):
+    if assume == 'env' and owner == 'sys':
+        return conj([
+            'X({ps} = {gid})'.format(ps=ps, gid=gid),
+            '({pc} = {u})'.format(pc=pc, u=u),
+            '({pc_next} = {v})'.format(pc_next=pc_next, v=v),
+            '({aux} = {k})'.format(aux=aux, k=key)])
+    else:
+        return conj([
+            'X({ps} = {gid})'.format(ps=ps, gid=gid),
+            '({pc} = {u})'.format(pc=pc, u=u),
+            'X({pc_next} = {v})'.format(pc_next=pc_next, v=v),
+            'X({aux} = {k})'.format(aux=aux, k=key)])
 
 
 def constrain_local_declarative_vars(t):
@@ -1529,6 +1586,7 @@ def add_process_scheduler(t, pids, player, atomic):
         gids.add(gid)
         pc_owner = dpid['owner']
         pc = pid_to_pc(pid)
+        pc_next = pid_to_pc_next(pid, assume, pc_owner)
         pc_dom = t.scopes['aux'][pc]['dom']
         comment = (
             '\n\n# pid: {pid}, gid: {gid}, '
@@ -1545,14 +1603,30 @@ def add_process_scheduler(t, pids, player, atomic):
             '((X {ps} = {gid}) -> ({trans}))').format(
                 ps=ps, gid=gid, trans=f['trans']))
         # idle program counter
-        safety[pc_owner].append((
-            '\n# idle program counter:\n'
-            '((X {ps} != {gid}) -> {invariant})').format(
-                ps=ps, gid=gid, invariant=_invariant(pc, pc_dom)))
-        # prevent env from selecting non-executable edge
-        if pc_owner == 'env' and assume == 'sys':
+        if assume == 'env' and pc_owner == 'sys':
+            safety[pc_owner].append((
+                '\n# program counter variables:\n'
+                '(ite (X ({ps} = {gid})), '
+                '(X {pc} = {pc_next}), ({invariant}))').format(
+                    ps=ps, gid=gid, pc=pc, pc_next=pc_next,
+                    invariant=_invariant(pc, pc_dom)))
+        else:
+            safety[pc_owner].append((
+                '\n# idle program counter:\n'
+                '((X {ps} != {gid}) -> {invariant})').format(
+                    ps=ps, gid=gid, invariant=_invariant(pc, pc_dom)))
+        # prevent pc_owner from selecting non-executable edge
+        if assume == 'env' and pc_owner == 'sys':
             safety[pc_owner].append(
-                '\n# prevent env from selecting blocked edge\n'
+                '\n# prevent `pc` owner (sys) from selecting blocked edge\n'
+                '( {pcmust} )'.format(
+                    pcmust=pids[pid]['pcmust']))
+            init[pc_owner].append(
+                '\n# initial condition for `pc_next`\n' +
+                pids[pid]['pc_next_init'])
+        elif assume == 'sys' and pc_owner == 'env':
+            safety[pc_owner].append(
+                '\n# prevent `pc` owner (env) from selecting blocked edge\n'
                 '( (X {ps} = {gid}) -> ({pcmust}) )'.format(
                     ps=ps, gid=gid, pcmust=pids[pid]['pcmust']))
         # prevent scheduler from selecting a non-executable process
