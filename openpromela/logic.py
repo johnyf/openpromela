@@ -1662,6 +1662,19 @@ def pid_to_pc(pid):
     return 'pc{pid}'.format(pid=pid)
 
 
+def pid_to_pc_next(pid, assume, pc_owner):
+    """Return program counter next value variable.
+
+    Same with `pid_to_pc`, except for `assume sys`.
+    In that case, it is a different sys variable "pcN_next".
+    """
+    assert pid >= 0, pid
+    assert assume in ('env', 'sys'), assume
+    if assume == 'env' and pc_owner == 'sys':
+        return 'pc{pid}_next'.format(pid=pid)
+    return pid_to_pc(pid)
+
+
 def pid_to_key(t, pid):
     """Return auxiliary multi-edge selector variable name.
 
