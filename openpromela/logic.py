@@ -838,17 +838,23 @@ def products_to_logic(products, global_defs):
     env_decl, sys_decl = constrain_local_declarative_vars(t)
     env_safe = [env_imp, env_decl]
     sys_safe = [sys_imp, sys_decl]
+    env_init = list()
+    sys_init = list()
     for player in {'env', 'sys'}:
-        e, s = add_process_scheduler(t, pids, player, atomic)
+        ei, si, e, s = add_process_scheduler(t, pids, player, atomic)
+        env_init.append(ei)
+        sys_init.append(si)
         env_safe.append(e)
         sys_safe.append(s)
+    env_init = conj(env_init)
+    sys_init = conj(sys_init)
     env_safe = conj(env_safe)
     sys_safe = conj(sys_safe)
     env_prog = [y for x in pids.itervalues()
                 for y in x['progress']['env']]
     sys_prog = [y for x in pids.itervalues()
                 for y in x['progress']['sys']]
-    return (t, env_safe, sys_safe,
+    return (t, env_init, sys_init, env_safe, sys_safe,
             env_prog, sys_prog, max_gids, atomic)
 
 
@@ -1502,6 +1508,7 @@ def add_process_scheduler(t, pids, player, atomic):
     # clauses
     ps = ps_str(player)
     deadlock = dict()
+    init = {'env': list(), 'sys': list()}
     safety = {'env': list(), 'sys': list()}
     gids = set()
     for pid, f in pids.iteritems():
@@ -1565,7 +1572,7 @@ def add_process_scheduler(t, pids, player, atomic):
                     ex=ex, gid=gid, nexe=blocks_if, ps=ps))
     # player has no processes ?
     if not gids:
-        return ('', '')
+        return ('', '', '', '')
     # assert contiguous gids
     max_gid = len(gids)
     assert gids == set(xrange(max_gid)), gids
@@ -1630,6 +1637,8 @@ def add_process_scheduler(t, pids, player, atomic):
                 ps=ps, max_gid=max_gid))
     logger.info('done with process scheduler.\n')
     return (
+        conj(init['env']),
+        conj(init['sys']),
         conj(safety['env'], sep=2*'\n'),
         conj(safety['sys'], sep=2*'\n'))
 
@@ -1741,7 +1750,7 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     """
     program = _parser.parse(code)
     global_defs, products, ltl = program.to_table()
-    (vartable, env_safe,
+    (vartable, env_init, sys_init, env_safe,
      sys_safe, env_prog, sys_prog, max_gids, atomic) = \
         products_to_logic(products, global_defs)
     ltl_spc = transform_ltl_blocks(ltl, vartable)
@@ -1769,13 +1778,13 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
             ' (ex_sys < {max_gid})) | {safe})').format(
                 max_gid=max_gids['sys'],
                 safe=sys_ltl_safe)
-    env_init = [env_ltl_init]
+    env_init = [env_ltl_init, env_init]
     env_safe = [env_safe, env_ltl_safe]
     env_prog = env_prog + env_ltl_prog
     env_prog = [x for x in env_prog if x != 'True']
     if not env_prog:
         env_prog = list()
-    sys_init = [sys_ltl_init]
+    sys_init = [sys_ltl_init, sys_init]
     sys_safe = [sys_safe, sys_ltl_safe]
     sys_prog = sys_prog + sys_ltl_prog
     sys_prog = [x for x in sys_prog if x != 'True']
