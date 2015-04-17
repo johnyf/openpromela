@@ -341,14 +341,13 @@ def test_assume_assert():
     }
     '''
     check_assume_owner(c, 'env', 'env')
-    # assumption sys pc: raise exception
+    # assume sys
     c = '''
     assume sys proctype foo(){
         bool x;
     }
     '''
-    with assert_raises(AssertionError):
-        program = parser.parse(c)
+    check_assume_owner(c, 'env', 'sys')
     # sys pc
     c = '''
     sys proctype foo(){
@@ -380,6 +379,103 @@ def check_assume_owner(c, assume, owner):
     assert hasattr(proc, 'owner'), proc
     assert proc.assume == assume, proc.assume
     assert proc.owner == owner, proc.owner
+
+
+def test_assume_sys():
+    c = '''
+    env bool x;
+
+    assume sys proctype foo(){
+        do
+        :: x = ! x
+        od
+    }
+
+    assert ltl { []<> x }
+    '''
+    assert logic.synthesize(c) is not None
+    # sys must help env
+    c = '''
+    env bool x = false;
+
+    assume sys proctype foo(){
+        do
+        :: x = ! x
+        :: skip
+        od
+    }
+
+    assert ltl { [] ! x }
+    '''
+    assert logic.synthesize(c) is not None
+    # must not be trivially realizable
+    c += ' assert ltl { []<> false }'
+    assert logic.synthesize(c) is None
+    # sys cannot avoid "[] x"
+    c = '''
+    env bool x = false;
+
+    assume sys proctype foo(){
+        do
+        :: x = true
+        od
+    }
+
+    assert ltl { [] ! x}
+    '''
+    assert logic.synthesize(c) is None
+    # sys has to alternate
+    c = '''
+    env bool x = false;
+
+    assume sys proctype foo(){
+        do
+        :: x = true
+        :: x = false
+        od
+    }
+
+    assert ltl { []<> x && []<> !x }
+    '''
+    assert logic.synthesize(c) is not None
+    # not trivially
+    c += ' assert ltl { []<> false }'
+    assert logic.synthesize(c) is None
+    # a larger graph
+    c = '''
+    env int(0, 5) x = 0;
+
+    assume sys proctype foo(){
+        do
+        :: (x < 5); x = x + 1
+        :: (x > 0); x = x - 1
+        od
+    }
+    '''
+    assert logic.synthesize(c) is not None
+    c += ' assert ltl { []<> false }'
+    assert logic.synthesize(c) is None
+    # env deadlocked at init
+    c = '''
+    env bit x = 0;
+
+    assume env proctype foo(){
+        do
+        :: x = 0
+        od
+    }
+
+    assume sys proctype frozen(){
+        do
+        :: false; x = 1
+        od
+    }
+
+    assert ltl { [](x == 0) }
+    '''
+    assert logic.synthesize(c) is not None
+    c += 'assert ltl { []<> false }'
+    assert logic.synthesize(c) is None
 
 
 def test_env_sys_key():
