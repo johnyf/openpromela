@@ -691,6 +691,21 @@ def test_else():
     assert mealy is None
 
 
+def test_else_bug():
+    c = '''
+    sys proctype foo(){
+        do
+        ::
+            if
+            :: false
+            :: else
+            fi
+        od
+    }
+    '''
+    assert logic.synthesize(c) is not None
+
+
 def test_sync():
     c = '''
     sync{
