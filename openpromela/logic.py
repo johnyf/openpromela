@@ -1080,12 +1080,12 @@ def graph_to_logic(g, t, pid, max_gid, atomic):
 
     @param k: index of key (for processes in sync products)
     """
-    pc = pid_to_pc(pid)
     aux = pid_to_key(t, pid)
     dpid = t.pids[pid]
     assume = dpid['assume']
     gid = dpid['gid']
     has_exclusive_vars = atomic[assume]
+    pc = pid_to_pc(pid)
     c = list()
     for u, du in g.nodes_iter(data=True):
         assert isinstance(u, int), u
@@ -1171,9 +1171,9 @@ def graph_to_guards(g, t, pid):
     aux = pid_to_key(t, pid)
     pc = pid_to_pc(pid)
     c = list()
-    # transition relation for env to select only
+    # transition relation for pc owner to select only
     # executable edges
-    # prevent env from seleting inexistent edges
+    # prevent pc owner from seleting inexistent edges
     for u in g:
         r = list()
         for _, v, key, d in g.edges_iter(u, keys=True, data=True):
@@ -1402,9 +1402,10 @@ def _constrain_imperative_var(t, pid, var, edges):
     logger.debug(
         'the edges for "{var}" are: {e}'.format(var=var, e=edges))
     assert edges
-    ps = pid_to_ps(t, pid)
+    dpid = t.pids[pid]
     pc = pid_to_pc(pid)
-    gid = t.pids[pid]['gid']
+    ps = pid_to_ps(t, pid)
+    gid = dpid['gid']
     aux = pid_to_key(t, pid)
     d = find_var_in_scope(var, t, pid)
     dom = d['dom']
@@ -1526,9 +1527,9 @@ def add_process_scheduler(t, pids, player, atomic):
         assert ps_pid == ps
         gid = dpid['gid']
         gids.add(gid)
+        pc_owner = dpid['owner']
         pc = pid_to_pc(pid)
         pc_dom = t.scopes['aux'][pc]['dom']
-        pc_owner = dpid['owner']
         comment = (
             '\n\n# pid: {pid}, gid: {gid}, '
             '{side} proctype: {prt}, pc owner: {owner}\n').format(
