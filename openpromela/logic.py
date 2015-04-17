@@ -737,8 +737,10 @@ class Table(object):
             'assume': assume}
         return pid
 
-    def add_program_counter(self, pid, n, owner, init):
-        pc = pid_to_pc(pid)
+    def add_program_counter(self, pid, n, owner, init, pc=None):
+        """Add program counter variable for given `pid`."""
+        if pc is None:
+            pc = pid_to_pc(pid)
         dom = (0, n - 1)
         assert pc not in self.scopes['aux']
         assert owner in ('env', 'sys')
