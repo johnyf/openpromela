@@ -173,11 +173,13 @@ def bitfield_to_int_states(g, t):
         h.add_node(u, state=int_state)
     for u, v in g.edges_iter():
         h.add_edge(u, v)
+    assert len(g) == len(h), (len(g), len(h))
     # remove deadends, where env looses
     s = {1}
     while s:
         s = {n for n in h if not h.succ.get(n)}
         h.remove_nodes_from(s)
+    assert h or not g, 'No loop in given graph `g`.'
     logger.debug(
         ('converted bitfields to integers.\n'
          'Strategy with vertices:\n  {v}\n'
