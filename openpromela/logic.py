@@ -704,12 +704,14 @@ class Table(object):
                 pids=pprint.pformat(self.pids))
 
     def variables_iter(self):
+        """Return generator over tuples `(pid, var, dict)`."""
         for pid, localvars in self.scopes.iteritems():
             for var, d in localvars.iteritems():
                 yield (pid, var, d)
 
     def add_var(self, pid, name, flatname, dom, dtype,
                 free, owner, length=None, init=None):
+        """Add variable to scope."""
         self.scopes.setdefault(pid, dict())
         d = dict()
         d['flatname'] = flatname
@@ -723,6 +725,7 @@ class Table(object):
         self.scopes[pid][name] = d
 
     def add_pid(self, proctype_name, owner, gid, lid, assume):
+        """Return `pid` for a freshly initialized process scope."""
         assert owner in {'env', 'sys'}
         assert assume in {'env', 'sys'}
         pid = len(self.pids)
@@ -738,9 +741,7 @@ class Table(object):
         pc = pid_to_pc(pid)
         dom = (0, n - 1)
         assert pc not in self.scopes['aux']
-        if owner != 'env' and owner != 'sys':
-            raise ValueError('unknown proctype owner: {owner}'.format(
-                             owner=owner))
+        assert owner in ('env', 'sys')
         self.add_var(pid='aux', name=pc, flatname=pc,
                      dom=dom, dtype='saturating',
                      free=True, owner=owner, init=init)
@@ -780,6 +781,7 @@ def array_to_flatnames(flatname, length):
 
 
 def products_to_logic(products, global_defs):
+    """Flatten process products to a logic formula."""
     t = Table()
     add_variables_to_table(t, global_defs,
                            pid='global', assume_context='sys')
@@ -1637,13 +1639,15 @@ def pid_to_ps(t, pid):
     assumptions by `env_ps`.
     Note that env may control the program counter of an assertion.
     """
+    assert pid >= 0, pid
     assume = t.pids[pid]['assume']
-    assert assume in {'env', 'sys'}
+    assert assume in {'env', 'sys'}, assume
     return ps_str(assume)
 
 
 def ps_str(player):
     """Return identifier of process selection variable."""
+    assert player in ('env', 'sys'), player
     return '{player}_ps'.format(player=player)
 
 
@@ -1652,6 +1656,7 @@ def pid_to_pc(pid):
 
     The process owner controls this variable.
     """
+    assert pid >= 0, pid
     return 'pc{pid}'.format(pid=pid)
 
 
@@ -1678,6 +1683,9 @@ def key_str(assume, owner, lid):
     The `lid` is an integer index of processes in
     a synchronous product.
     """
+    assert assume in ('env', 'sys'), assume
+    assert owner in ('env', 'sys'), owner
+    assert lid >= 0, lid
     return '{assume}{owner}key{lid}'.format(
         assume=assume, owner=owner, lid=lid)
 
@@ -1689,6 +1697,7 @@ def pm_str(player):
     pause while it executes atomically,
     it sets this variable to `True`.
     """
+    assert player in ('env', 'sys')
     return 'pm_{player}'.format(player=player)
 
 
@@ -1701,6 +1710,7 @@ def _invariant(flatname, dom, length=None):
     if length is None:
         return '((X {var}) {op} {var})'.format(var=flatname, op=op)
     # array
+    assert length > 0, length
     c = list()
     for ei in array_to_flatnames(flatname, length):
         s = '((X {var}) {op} {var})'.format(var=ei, op=op)
