@@ -133,6 +133,8 @@ def _slugs_str(r, name, sep='\n'):
 def _format_slugs_vars(dvars, owner, name):
     a = [var for var, d in dvars.iteritems()
          if d['owner'] == owner]
+    print('number of unprimed {owner} vars: {n}'.format(
+        owner=owner, n=len(a)))
     a = natsort.natsorted(a)
     return '[{name}]\n{vars}\n\n'.format(name=name, vars='\n'.join(a))
 
