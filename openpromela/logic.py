@@ -713,14 +713,14 @@ class Table(object):
                 free, owner, length=None, init=None):
         """Add variable to scope."""
         self.scopes.setdefault(pid, dict())
-        d = dict()
-        d['flatname'] = flatname
-        d['dom'] = dom
-        d['type'] = dtype
-        d['length'] = length
-        d['owner'] = owner
-        d['free'] = free
-        d['init'] = init
+        d = dict(
+            flatname=flatname,
+            dom=dom,
+            type=dtype,
+            length=length,
+            owner=owner,
+            free=free,
+            init=init)
         assert name not in self.scopes[pid], (name, pid)
         self.scopes[pid][name] = d
 
@@ -1695,7 +1695,8 @@ def add_process_scheduler(t, pids, player, atomic):
                     '(X {ps} != {max_gid})\n').format(
                         ps=ps, max_gid=max_gid))
         else:
-            raise Exception('Unknown player "{player}"'.format(player=player))
+            raise Exception(
+                'Unknown player "{player}"'.format(player=player))
     # if all processes block, signal deadlock
     # a False means that some process is always executable
     assert deadlock, deadlock
