@@ -664,7 +664,7 @@ class Table(object):
     Attributes of each variable:
 
       - flatname: `str`
-      - dom
+      - dom: range of variable
       - owner: in `{'env', 'sys'}`
       - free: `bool`
 
@@ -674,9 +674,15 @@ class Table(object):
         `str`
       - owner: of program counter
         in `{'env', 'sys'}`
-      - gid: group id of sync product
+      - ps: process scheduler variable (if in async product)
+        `str`
+      - gid: group id of an entity inside an asynchronous product.
+        An entity is either a `proctype`, or an asynchronous product.
+        Asynchronous products can appear as entities inside an
+        asynchronous product at the source level, but they will
+        be simplified before assigning group ids.
         `int`
-      - lid: local id inside the sync product
+      - lid: local id of an entity inside an synchronous product
         `int`
       - assume: assumption or assertion
         in `{'env', 'sys'}`
@@ -718,7 +724,7 @@ class Table(object):
         assert name not in self.scopes[pid], (name, pid)
         self.scopes[pid][name] = d
 
-    def add_pid(self, proctype_name, owner, gid, lid, assume):
+    def add_pid(self, proctype_name, owner, ps, gid, lid, assume):
         """Return `pid` for a freshly initialized process scope."""
         assert owner in {'env', 'sys'}
         assert assume in {'env', 'sys'}
@@ -726,6 +732,7 @@ class Table(object):
         self.pids[pid] = {
             'proctype': proctype_name,
             'owner': owner,
+            'ps': ps,
             'gid': gid,
             'lid': lid,
             'assume': assume}
