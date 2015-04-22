@@ -817,10 +817,10 @@ def products_to_logic(products, global_defs):
     proctypes, n_keys, top_ps = flatten_top_async(products, t)
     # find the players with atomic statements
     atomic = who_has_atomic(proctypes)
-    pids = add_processes(proctypes, max_gids, atomic, t)
+    pids = add_processes(proctypes, atomic, t)
     # add key vars to table
     max_key = 0
-    for g, _, _ in proctypes:
+    for g, _, _, _ in proctypes:
         max_key = max(max_key, g.max_key)
     for assume, d in n_keys.iteritems():
         for owner, nk in d.iteritems():
@@ -839,7 +839,8 @@ def products_to_logic(products, global_defs):
     env_init = list()
     sys_init = list()
     for player in {'env', 'sys'}:
-        ei, si, e, s = add_process_scheduler(t, pids, player, atomic)
+        ei, si, e, s = add_process_scheduler(
+            t, pids, player, atomic, top_ps)
         env_init.append(ei)
         sys_init.append(si)
         env_safe.append(e)
@@ -853,7 +854,7 @@ def products_to_logic(products, global_defs):
     sys_prog = [y for x in pids.itervalues()
                 for y in x['progress']['sys']]
     return (t, env_init, sys_init, env_safe, sys_safe,
-            env_prog, sys_prog, max_gids, atomic)
+            env_prog, sys_prog, atomic, top_ps)
 
 
 def flatten_top_async(products, t):
@@ -999,7 +1000,7 @@ def max_edge_multiplicity(g, n=None):
 
 def who_has_atomic(proctypes):
     d = dict(env=0, sys=0)
-    for g, gid, lid in proctypes:
+    for g, ps, gid, lid in proctypes:
         assume = g.assume
         if has_atomic(g):
             d[assume] += 1
@@ -1012,24 +1013,24 @@ def has_atomic(g):
                for u, d in g.nodes_iter(data=True))
 
 
-def add_processes(proctypes, max_gids, atomic, t):
+def add_processes(proctypes, atomic, t):
     """Instantiate processes for each proctype in `proctypes`."""
     # instantiate each proctype
     pids = dict()
-    for g, gid, lid in proctypes:
+    for g, ps, gid, lid in proctypes:
         # above it is ensured that in sync products only 1 active
         for j in xrange(g.active):
             logger.info('\t instance {j}'.format(j=j))
-            max_gid = max_gids[g.assume]
-            process_to_logic(gid, lid, g, t, max_gid, atomic, pids)
+            process_to_logic(ps, gid, lid, g, t, atomic, pids)
         logger.info(
             '-- done with proctype "{name}".\n'.format(name=g.name))
     return pids
 
 
 # a process is an instance of a proctype
-def process_to_logic(gid, lid, g, t, max_gid, atomic, pids):
-    pid = t.add_pid(g.name, g.owner, gid, lid, assume=g.assume)
+def process_to_logic(ps, gid, lid, g, t, atomic, pids):
+    _, max_gid = t.products[ps]['dom']
+    pid = t.add_pid(g.name, g.owner, ps, gid, lid, assume=g.assume)
     pc = pid_to_pc(pid)
     add_variables_to_table(t, g.locals, pid, g.assume)
     # create graph annotated with formulae
@@ -1545,7 +1546,8 @@ def _constrain_imperative_var(t, pid, var, edges):
             cond = '({conj}) -> ({inv})'.format(conj=_conj, inv=inv)
             r.append(cond)
         econj = conj(r)
-        edge = edge_str(ps, gid, pc, pc_next, u, v, aux, key, assume, owner)
+        edge = edge_str(ps, gid, pc, pc_next,
+                        u, v, aux, key, assume, owner)
         cond = '({edge}) -> ({econj})'.format(econj=econj, edge=edge)
         a.append(cond)
     _conj = conj(a, sep='\n\t')
@@ -1620,13 +1622,12 @@ def constrain_local_declarative_vars(t):
     return c['env'], c['sys']
 
 
-def add_process_scheduler(t, pids, player, atomic):
+def add_process_scheduler(t, pids, player, atomic, top_ps):
     logger.info('adding process scheduler...')
     assert player in {'env', 'sys'}
     deadlock = dict()
     init = {'env': list(), 'sys': list()}
     safety = {'env': list(), 'sys': list()}
-    gids = set()
     for pid, f in pids.iteritems():
         # pid constrains given player ?
         dpid = t.pids[pid]
@@ -1640,7 +1641,6 @@ def add_process_scheduler(t, pids, player, atomic):
         proctype = dpid['proctype']
         ps = pid_to_ps(t, pid)
         gid = dpid['gid']
-        gids.add(gid)
         pc_owner = dpid['owner']
         pc = pid_to_pc(pid)
         pc_next = pid_to_pc_next(pid, assume, pc_owner)
@@ -1703,18 +1703,21 @@ def add_process_scheduler(t, pids, player, atomic):
                 '(X {ps} = {gid}) )').format(
                     ex=ex, gid=gid, nexe=blocks_if, ps=ps))
     # player has no processes ?
-    if not gids:
+    if player not in top_ps:
         return ('', '', '', '')
+    ps = top_ps[player]
+    ps_dom = t.scopes['global'][ps]['dom']
+    ps_min, ps_max = ps_dom
+    assert ps_min == 0, ps_min
+    assert ps_max >= 0, ps_max
     # assert contiguous gids
-    max_gid = len(gids)
-    assert gids == set(xrange(max_gid)), gids
     # define "exclusive" variables for requesting atomic execution
     if atomic[player]:
         ex = 'ex_{player}'.format(player=player)
         ex_dom = ps_dom
         t.add_var(pid='aux', name=ex, flatname=ex,
                   dom=ex_dom, dtype='saturating', free=True, owner=player,
-                  init=max_gid)
+                  init=ps_max)
         # define preemption variables for atomic execution
         # that stops also the other player
         pm = pm_str(player)
@@ -1722,24 +1725,24 @@ def add_process_scheduler(t, pids, player, atomic):
                   dom='boolean', dtype='boolean', free=True, owner=player,
                   init='false')
     # last value means deadlock
-    if max_gid:
+    if ps_max > 0:
         if player == 'sys':
             safety[player].append((
                 '\n\n# never deadlock:\n'
-                '(X {ps} != {max_gid})\n').format(ps=ps, max_gid=max_gid))
+                '(X {ps} != {ps_max})\n').format(ps=ps, ps_max=ps_max))
         elif player == 'env':
             other_player = 'sys'
             pm_sys = pm_str(other_player)
             if atomic['sys']:
                 safety[player].append((
                     '\n\n# never deadlock, unless preempted by sys:\n'
-                    '((X {ps} = {max_gid}) <-> {pm})\n').format(
-                        ps=ps, max_gid=max_gid, pm=pm_sys))
+                    '((X {ps} = {ps_max}) <-> {pm})\n').format(
+                        ps=ps, ps_max=ps_max, pm=pm_sys))
             else:
                 safety[player].append((
                     '\n\n# never deadlock:\n'
-                    '(X {ps} != {max_gid})\n').format(
-                        ps=ps, max_gid=max_gid))
+                    '(X {ps} != {ps_max})\n').format(
+                        ps=ps, ps_max=ps_max))
         else:
             raise Exception(
                 'Unknown player "{player}"'.format(player=player))
@@ -1755,15 +1758,15 @@ def add_process_scheduler(t, pids, player, atomic):
     if player == 'env':
         safety['env'].append(
             '\n# deadlock\n' +
-            "\n ( ({deadlocked}) -> (X {ps} = {max_gid}) )\n".format(
+            "\n ( ({deadlocked}) -> (X {ps} = {ps_max}) )\n".format(
                 deadlocked=deadlocked,
-                ps=ps, max_gid=max_gid))
+                ps=ps, ps_max=ps_max))
     elif player == 'sys':
         safety['env'].append(
             '\n# deadlock\n' +
-            "\n ( ({deadlocked}) <-> (X {ps} = {max_gid}) )\n".format(
+            "\n ( ({deadlocked}) <-> (X {ps} = {ps_max}) )\n".format(
                 deadlocked=deadlocked,
-                ps=ps, max_gid=max_gid))
+                ps=ps, ps_max=ps_max))
     logger.info('done with process scheduler.\n')
     return (
         conj(init['env']),
@@ -1884,7 +1887,7 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     program = _parser.parse(code)
     global_defs, products, ltl = program.to_table()
     (vartable, env_init, sys_init, env_safe,
-     sys_safe, env_prog, sys_prog, max_gids, atomic) = \
+     sys_safe, env_prog, sys_prog, atomic, top_ps) = \
         products_to_logic(products, global_defs)
     ltl_spc = transform_ltl_blocks(ltl, vartable)
     t = vartable.flatten()
@@ -1901,17 +1904,18 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
         strict_atomic and
         'ex_sys' in vartable.scopes['aux'])
     if deactivate:
-        ps = ps_str(1)
+        ps = top_ps['sys']
+        _, max_gid = vartable.products[ps]['dom']
         env_ltl_safe = (
             '( (pm_sys & ((X {ps}) = ex_sys) &'
             ' (ex_sys < {max_gid})) | {safe})').format(
-                max_gid=max_gids['sys'],
+                max_gid=max_gid,
                 safe=env_ltl_safe,
                 ps=ps)
         sys_ltl_safe = (
             '( ( ((X {ps}) = ex_sys) &'
             ' (ex_sys < {max_gid})) | {safe})').format(
-                max_gid=max_gids['sys'],
+                max_gid=max_gid,
                 safe=sys_ltl_safe,
                 ps=ps)
     env_init = [env_ltl_init, env_init]
