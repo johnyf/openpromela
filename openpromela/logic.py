@@ -814,39 +814,10 @@ def products_to_logic(products, global_defs):
     t = Table()
     add_variables_to_table(t, global_defs,
                            pid='global', assume_context='sys')
-    proctypes, max_gids = flatten_products(products, t)
+    proctypes, n_keys, top_ps = flatten_top_async(products, t)
     # find the players with atomic statements
     atomic = who_has_atomic(proctypes)
     pids = add_processes(proctypes, max_gids, atomic, t)
-    # find number of keys needed
-    # in sync product multiple program graphs mv simultaneously
-    n_keys = dict(env=dict(env=0, sys=0), sys=dict(env=0, sys=0))
-    for p in products:
-        if isinstance(p, AST.Product):
-            proc = next(iter(p.body))
-            assume = proc.assume
-            owner = proc.owner
-            k = len(p.body)
-        else:
-            assume = p.assume
-            owner = p.owner
-            k = 1
-        n_keys[assume][owner] = max(n_keys[assume][owner], k)
-    # check that all processes in group are
-    # either assumptions or assertions
-    # note: each pc though can have a different owner
-    for p in products:
-        if not isinstance(p, AST.Product):
-            continue
-        proc = next(iter(p.body))
-        assume = proc.assume
-        for proc in p.body:
-            if proc.assume != assume:
-                raise Exception(
-                    'Not all processes in sync product '
-                    'are {side}.'.format(
-                        side='assumptions'
-                        if assume == 'env' else 'assertions'))
     # add key vars to table
     max_key = 0
     for g, _, _ in proctypes:
@@ -885,31 +856,107 @@ def products_to_logic(products, global_defs):
             env_prog, sys_prog, max_gids, atomic)
 
 
-def flatten_products(products, t):
-    """Flatten nested (a)synchronous products."""
-    max_gids = {'env': 0, 'sys': 0}
+def flatten_top_async(products, t):
+    """Collect proctypes and products."""
+    top_async = split_products(products)
+    # to retrieve elsewhere:
+    # top 2 products are indexed 0, 1
+    n_keys = dict(env=dict(env=0, sys=0),
+                  sys=dict(env=0, sys=0))
     proctypes = list()
+    parent_ps = None
+    gid = None
+    top_ps = dict()
+    for owner in ('env', 'sys'):
+        c = top_async[owner]
+        p = AST.Product(c, sync=False, owner=owner)
+        keys, ps = flatten_product(
+            p, parent_ps, gid, t, proctypes)
+        update_n_keys(n_keys, keys)
+        if ps is not None:
+            top_ps[owner] = ps
+    return proctypes, n_keys, top_ps
+
+
+def flatten_product(p, parent_ps, gid,
+                    t, proctypes, lid=0, max_active=None):
+    """Flatten nested (a)synchronous products."""
+    ps = None
+    # `n_keys` is used to find number of keys needed
+    # in sync product multiple program graphs mv simultaneously
+    n_keys = dict(env=dict(env=0, sys=0),
+                  sys=dict(env=0, sys=0))
+    # gid = local id inside an async product
+    if isinstance(p, AST.Proctype):
+        g = proctype_to_graph(p, max_active)
+        proctypes.append((g, parent_ps, gid, lid))
+        assume = p.assume
+        owner = p.owner
+        n_keys[assume][owner] = 1
+    elif isinstance(p, AST.Product):
+        # recurse
+        if p.sync:
+            # lid = local id inside a sync product
+            for lid, x in enumerate(p.body):
+                keys, _ = flatten_product(
+                    x,
+                    parent_ps,
+                    gid,
+                    t,
+                    proctypes,
+                    lid=lid,
+                    max_active=1)
+                for assume in ('env', 'sys'):
+                    for owner in ('env', 'sys'):
+                        n_keys[assume][owner] += keys[assume][owner]
+        else:
+            # async
+            # owner = p.owner  # an experiment
+            owner = 'env'
+            dom = (0, len(p.body))
+            if p.body:
+                ps = t.add_product_id(owner, dom, parent_ps, gid)
+            for j, x in enumerate(p.body):
+                keys, _ = flatten_product(
+                    x,
+                    parent_ps=ps,
+                    gid=j,
+                    t=t,
+                    proctypes=proctypes)
+                update_n_keys(n_keys, keys)
+        # check that all processes in group are
+        # either assumptions or assertions
+        c = [x.assume == 'env' for x in p.body
+             if isinstance(x, AST.Proctype)]
+        if not all(c) and any(c):
+            raise Exception(
+                'Not all processes in product '
+                'constrain {assume} flow.'.format(
+                    assume=assume))
+    else:
+        raise TypeError('group of type "{t}"'.format(t=type(p)))
+    return n_keys, ps
+
+
+def update_n_keys(n_keys, keys):
+    for assume in ('env', 'sys'):
+        for owner in ('env', 'sys'):
+            n_keys[assume][owner] = max(
+                keys[assume][owner],
+                n_keys[assume][owner])
+
+
+def split_products(products):
+    """Separate top entities into two asynchronous products."""
+    async = dict(env=list(), sys=list())
     for p in products:
         if isinstance(p, AST.Proctype):
             assume = p.assume
-            gid = max_gids[assume]
-            lid = 0
-            g = proctype_to_graph(p, t)
-            proctypes.append((g, gid, lid))
         elif isinstance(p, AST.Product):
-            assert p.sync  # for now allow only sync product groups
             proc = next(iter(p.body))
             assume = proc.assume
-            gid = max_gids[assume]
-            # lid = local id inside a sync product
-            for lid, p in enumerate(p.body):
-                g = proctype_to_graph(p, 1)
-                proctypes.append((g, gid, lid))
-            # TODO: collect group var decls
-        else:
-            raise TypeError('group of type "{t}"'.format(t=type(p)))
-        max_gids[assume] += 1
-    return proctypes, max_gids
+        async[assume].append(p)
+    return async
 
 
 def proctype_to_graph(p, max_active=None):
