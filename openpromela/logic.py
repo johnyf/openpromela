@@ -289,6 +289,10 @@ class AST(object):
                 owner=owner, sync=sync,
                 body='\n'.join(ast.to_str(x) for x in self.body))
 
+        # TODO: flattener that simplifies consecutive
+        # products of the same type, e.g.,
+        # `async{ async{ ... }} = async{ ... }`
+
     class Proctype(ast.Proctype):
         def __init__(self, name, body, owner=None, assume=None,
                      active=None, **kw):
@@ -819,6 +823,7 @@ def products_to_logic(products, global_defs):
     atomic = who_has_atomic(proctypes)
     pids = add_processes(proctypes, atomic, t)
     # add key vars to table
+    # TODO: optimize key domain sizes
     max_key = 0
     for g, _, _, _ in proctypes:
         max_key = max(max_key, g.max_key)
@@ -1236,7 +1241,8 @@ def form_notexe_condition(g, t, pid):
         # at least one outedge always executable ?
         for _, v, key, d in g.edges_iter(u, data=True, keys=True):
             c = d.get('stmt')
-            assert isinstance(c, (AST.Assignment, AST.Expression, AST.Else))
+            assert isinstance(c, (AST.Assignment,
+                                  AST.Expression, AST.Else))
             e = c.to_guard(t, pid, g.assume)
             r.append(e)
             if e == 'True':
@@ -1725,6 +1731,7 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
     assert ps_min == 0, ps_min
     assert ps_max >= 0, ps_max
     # assert contiguous gids
+    # TODO: reimplement this assertion
     # define "exclusive" variables for requesting atomic execution
     if atomic[player]:
         ex = 'ex_{player}'.format(player=player)
