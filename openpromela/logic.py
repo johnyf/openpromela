@@ -686,12 +686,22 @@ class Table(object):
         `int`
       - assume: assumption or assertion
         in `{'env', 'sys'}`
+
+    Attributes of each product:
+
+      - owner: of process selection variable (ps*)
+        in `{'env', 'sys'}`
+      - dom: range of `ps*` variable
+      - parent_ps: name of product containing this one
+        `str` or `None`
+      - gid: group id of this product inside `parent_ps`
     """
 
     def __init__(self):
         # self.channels = dict()
         self.scopes = {'aux': dict(), 'global': dict()}
         self.pids = dict()
+        self.products = dict()
         # struct data types not supported yet
 
     def __str__(self):
@@ -699,9 +709,11 @@ class Table(object):
             '\nTable of variables\n'
             '--------------------\n\n'
             '{scopes}\n\n'
-            '{pids}\n\n').format(
+            '{pids}\n\n'
+            '{products}\n\n').format(
                 scopes=pprint.pformat(self.scopes),
-                pids=pprint.pformat(self.pids))
+                pids=pprint.pformat(self.pids),
+                products=pprint.pformat(self.products))
 
     def variables_iter(self):
         """Return generator over tuples `(pid, var, dict)`."""
@@ -723,6 +735,20 @@ class Table(object):
             init=init)
         assert name not in self.scopes[pid], (name, pid)
         self.scopes[pid][name] = d
+
+    def add_product_id(self, owner, dom, parent_ps, gid):
+        """Return a fresh process selection variable."""
+        j = len(self.products)
+        ps = ps_str(j)
+        self.products[ps] = dict(
+            owner=owner,
+            dom=dom,
+            parent_ps=parent_ps,
+            gid=gid)
+        self.add_var(
+            pid='global', name=ps, flatname=ps,
+            dom=dom, dtype='saturating', free=True, owner='env')
+        return ps
 
     def add_pid(self, proctype_name, owner, ps, gid, lid, assume):
         """Return `pid` for a freshly initialized process scope."""
@@ -1649,10 +1675,6 @@ def add_process_scheduler(t, pids, player, atomic):
     # assert contiguous gids
     max_gid = len(gids)
     assert gids == set(xrange(max_gid)), gids
-    # define ps variable
-    ps_dom = (0, max_gid)
-    t.add_var(pid='global', name=ps, flatname=ps,
-              dom=ps_dom, dtype='saturating', free=True, owner='env')
     # define "exclusive" variables for requesting atomic execution
     if atomic[player]:
         ex = 'ex_{player}'.format(player=player)
