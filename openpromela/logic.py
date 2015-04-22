@@ -1550,14 +1550,6 @@ def constrain_local_declarative_vars(t):
 def add_process_scheduler(t, pids, player, atomic):
     logger.info('adding process scheduler...')
     assert player in {'env', 'sys'}
-    # env controls both selectors:
-    # selector among env pids
-    # envps = 'env_ps'
-    # selector among sys pids
-    # sysps = 'sys_ps'
-    #
-    # clauses
-    ps = ps_str(player)
     deadlock = dict()
     init = {'env': list(), 'sys': list()}
     safety = {'env': list(), 'sys': list()}
@@ -1573,8 +1565,7 @@ def add_process_scheduler(t, pids, player, atomic):
         # constraint on given player
         logger.debug('scheduling pid: {pid}'.format(pid=pid))
         proctype = dpid['proctype']
-        ps_pid = pid_to_ps(t, pid)
-        assert ps_pid == ps
+        ps = pid_to_ps(t, pid)
         gid = dpid['gid']
         gids.add(gid)
         pc_owner = dpid['owner']
@@ -1720,15 +1711,19 @@ def pid_to_ps(t, pid):
     Note that env may control the program counter of an assertion.
     """
     assert pid >= 0, pid
-    assume = t.pids[pid]['assume']
-    assert assume in {'env', 'sys'}, assume
-    return ps_str(assume)
+    return t.pids[pid]['ps']
 
 
-def ps_str(player):
-    """Return identifier of process selection variable."""
-    assert player in ('env', 'sys'), player
-    return '{player}_ps'.format(player=player)
+def ps_str(product_id):
+    """Return identifier of process selection variable.
+
+    @param product_id: for each asynchronous product,
+        this is a unique integer identifier.
+        These integers are defined after merging
+        nested products of the same type, e.g.,
+        `async{ async{ ... } } = async{ ... }'
+    """
+    return 'ps{i}'.format(i=product_id)
 
 
 def pid_to_pc(pid):
@@ -1837,16 +1832,19 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
         strict_atomic and
         'ex_sys' in vartable.scopes['aux'])
     if deactivate:
+        ps = ps_str(1)
         env_ltl_safe = (
-            '( (pm_sys & ((X sys_ps) = ex_sys) &'
+            '( (pm_sys & ((X {ps}) = ex_sys) &'
             ' (ex_sys < {max_gid})) | {safe})').format(
                 max_gid=max_gids['sys'],
-                safe=env_ltl_safe)
+                safe=env_ltl_safe,
+                ps=ps)
         sys_ltl_safe = (
-            '( ( ((X sys_ps) = ex_sys) &'
+            '( ( ((X {ps}) = ex_sys) &'
             ' (ex_sys < {max_gid})) | {safe})').format(
                 max_gid=max_gids['sys'],
-                safe=sys_ltl_safe)
+                safe=sys_ltl_safe,
+                ps=ps)
     env_init = [env_ltl_init, env_init]
     env_safe = [env_safe, env_ltl_safe]
     env_prog = env_prog + env_ltl_prog
