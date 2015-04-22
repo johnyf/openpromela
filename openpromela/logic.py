@@ -1915,12 +1915,7 @@ def _invariant(flatname, dom, length=None):
     return conj(c)
 
 
-def synthesize(code, strict_atomic=True, symbolic=False, **kw):
-    """Call GR(1) synthesis tool and return winning transducer.
-
-    @param strict_atomic: if `True`, then deactivate LTL safety
-        properties during atomic execution.
-    """
+def compile_spec(code, strict_atomic=True):
     program = _parser.parse(code)
     global_defs, products, ltl = program.to_table()
     (vartable, env_init, sys_init, env_safe,
@@ -1989,6 +1984,16 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     logger.info(s)
     if logger.getEffectiveLevel() < logging.DEBUG:
         dump_ltl_to_json(spc)
+    return spc
+
+
+def synthesize(code, strict_atomic=True, symbolic=False, **kw):
+    """Call GR(1) synthesis tool and return winning transducer.
+
+    @param strict_atomic: if `True`, then deactivate LTL safety
+        properties during atomic execution.
+    """
+    spc = compile_spec(code, strict_atomic)
     mealy = slugs.synthesize(spc, symbolic=symbolic, **kw)
     return mealy
 
