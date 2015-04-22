@@ -159,7 +159,7 @@ def list_bits(dvars):
 
 
 def bitfield_to_int_states(g, t):
-    """Convert bitfields to integers for "state" at each strategy node.
+    """Convert bitfields to integers for "state" at each node.
 
     @type g: `networkx.DiGraph`
     @type t: `VariablesTable`
