@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import time
+import psutil
 from openpromela import logic
 
 
@@ -66,9 +67,16 @@ if __name__ == '__main__':
     with open(INPUT_FILE) as f:
         s = f.read()
     for i in xrange(n, m):
-        print('drop caches...')
+        # print('drop caches...')
         # this avoids creating log files as root
         # os.system('sudo sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"')
+        #
+        # # check if other users
+        users = psutil.get_users()
+        if len(users) > 1:
+            print('warning: other users logged in'
+                  '(may start running expensive jobs).')
+        # print info
         print('starting {i} masters...'.format(i=i))
         bdd_file = 'bdd_{i}_masters.txt'.format(i=i)
         log_file = 'log_{i}_masters.txt'.format(i=i)
