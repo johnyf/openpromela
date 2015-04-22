@@ -81,9 +81,9 @@ if __name__ == '__main__':
         c = re.sub('#define N.*', newline, s)
         logger.debug(c)
         # add multiple weak fairness assumptions
-        prog = ' && '.join(
-            '[]<>(request[{k}] -> (master == {k}))'.format(k=k)
-            for k in xrange(i))
+        # prog = ' && '.join(
+        #    '[]<>(request[{k}] -> (master == {k}))'.format(k=k)
+        #    for k in xrange(i))
         # c += form_progress(i)
         # run
         t0 = time.time()
