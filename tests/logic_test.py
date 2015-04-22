@@ -11,12 +11,24 @@ h = logging.FileHandler(BIT_LOG, mode='w')
 h.setLevel(logging.DEBUG)
 bit_log.addHandler(h)
 
+h = logging.StreamHandler()
+
+log = logging.getLogger('openpromela.slugs')
+# log.setLevel(5)
+# log.addHandler(h)
+
 log = logging.getLogger('openpromela.logic')
-log.setLevel(5)
-# log.addHandler(logging.StreamHandler())
+log.setLevel(1)
+
+log = logging.getLogger('promela.ast')
+log.setLevel(1)
+
+# Promela parser
+log = logging.getLogger('promela.yacc.parser')
+log.setLevel('ERROR')
+#
 # avoid nose dumping PDFs
 logging.getLogger('promela.ast').setLevel('ERROR')
-logging.getLogger('promela.yacc.parser').setLevel('ERROR')
 logging.getLogger('astutils').setLevel('ERROR')
 
 
