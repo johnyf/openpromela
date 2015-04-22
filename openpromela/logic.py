@@ -1767,6 +1767,22 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
             "\n ( ({deadlocked}) <-> (X {ps} = {ps_max}) )\n".format(
                 deadlocked=deadlocked,
                 ps=ps, ps_max=ps_max))
+    # process scheduler vars
+    for ps, d in t.products.iteritems():
+        parent_ps = d['parent_ps']
+        # top async ?
+        if parent_ps is None:
+            continue
+        # async other than top
+        gid = d['gid']
+        _, dom_max = d['dom']
+        safety['env'].append(
+            '\n# nesting of async and sync products\n'
+            '(({parent_ps} != {gid}) <-> ({ps} = {dom_max}))'.format(
+                parent_ps=parent_ps,
+                gid=gid,
+                ps=ps,
+                dom_max=dom_max))
     logger.info('done with process scheduler.\n')
     return (
         conj(init['env']),
