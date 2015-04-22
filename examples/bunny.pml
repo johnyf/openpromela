@@ -3,7 +3,7 @@
 free env int(1, 2) xt;
 env int(0, H) yt;
 
-assume active env proctype taz(){
+assume env proctype taz(){
     do
     :: yt = yt - 1
     :: yt = yt + 1
@@ -16,7 +16,7 @@ assume ltl { []<>(yt == 0) }
 sys int(0, 3) x;
 sys int(0, H) y;
 
-assert active sys proctype bunny(){
+assert sys proctype bunny(){
     do
     :: x = x - 1
     :: x = x + 1

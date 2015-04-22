@@ -29,7 +29,7 @@ assume ltl { []<> ready }
 /* A1: if current master is granted locked access,
  * then it must progress by withdrawing the lock request.
  */
-assume active env proctype withdraw_lock(){
+assume env proctype withdraw_lock(){
 	progress:
 	do
 	:: lock;
@@ -78,7 +78,7 @@ assert ltl {
 sync{
 
 /* G9: weak fairness */
-assert active proctype fairness(){
+assert sys proctype fairness(){
 	int(0, N) count;
 	do
 	:: (! request[count] || (master == count));
@@ -95,7 +95,7 @@ assert active proctype fairness(){
  * then locking shall be withdrawn before starting
  * another access.
  */
-assert active sys proctype maintain_lock(){
+assert sys proctype maintain_lock(){
 	do
 	:: (lock && start && (burst == INCR));
 		do
@@ -109,7 +109,7 @@ assert active sys proctype maintain_lock(){
 /* G3: for a BURST4 access,
  * count the "ready" time steps.
  */
-assert active sys proctype count_burst(){
+assert sys proctype count_burst(){
 	int(0, 3) count;
 	do
 	:: (start && lock &&
