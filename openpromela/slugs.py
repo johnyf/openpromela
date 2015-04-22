@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import pprint
-import subprocess
+import subprocess32
 import sys
 import time
 import tempfile
@@ -23,6 +23,7 @@ import psutil
 
 logger = logging.getLogger(__name__)
 slugs_log = logging.getLogger(__name__ + '.slugs')
+details_log = logging.getLogger(__name__ + '.details')
 SLUGS_SPEC = 'slugs.txt'
 SLUGS_NICE = 'slugs_readable.txt'
 BDD_FILE = 'bdd.txt'
@@ -56,10 +57,10 @@ def synthesize(spec, symbolic=True, bddfile=None, make=True):
     logger.info('\n\n spec:\n\n {spec}'.format(
         spec=spec) + '\n\n slugs in:\n\n {s}\n'.format(s=s))
     logger.info('-- done compiling to slugsin')
-    realizable, out = _call_slugs(
+    realizable = _call_slugs(
         fin.name, symbolic=symbolic, bddfile=bddfile, make=make)
     os.unlink(fin.name)
-    logger.debug('slugs output:\n{out}'.format(out=out))
+    # logger.debug('slugs output:\n{out}'.format(out=out))
     if realizable:
         logger.info('realizable')
     else:
@@ -69,6 +70,7 @@ def synthesize(spec, symbolic=True, bddfile=None, make=True):
         return realizable
     if not realizable:
         return None
+    '''
     g = load_strategy(out)
     logger.debug(
         ('loaded strategy with vertices:\n  {v}\n'
@@ -76,7 +78,9 @@ def synthesize(spec, symbolic=True, bddfile=None, make=True):
             v='\n  '.join(str(x) for x in g.nodes(data=True)),
             e=g.edges()))
     h = bitvector.bitfield_to_int_states(g, aut.vars)
-    mealy = strategy_to_mealy(h, spec)
+    mealy = strategy_to_mealy(h, spec.init, aut.vars)
+    '''
+    mealy = True
     return mealy
 
 
@@ -146,12 +150,13 @@ def _call_slugs(filename, symbolic=True, bddfile=None, make=True):
     else:
         options.append('--onlyRealizability')
     logger.debug('Calling: {cmd}'.format(cmd=' '.join(options)))
+    f = open('slugs_details.txt', 'w')
     try:
-        p = subprocess.Popen(
+        p = subprocess32.Popen(
             options,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+            stdout=f,
+            stderr=subprocess32.PIPE,
+            bufsize=100)
     except OSError as e:
         if e.errno == os.errno.ENOENT:
             raise Exception('slugs not found in path.')
@@ -177,17 +182,19 @@ def _call_slugs(filename, symbolic=True, bddfile=None, make=True):
         time.sleep(1.0)
     print(s)
     slugs_log.info('slugs returned')
-    out, err = p.communicate()
-    msg = (
-        '\n slugs return code: {c}\n\n'.format(c=p.returncode) +
-        '\n slugs stdrr: {c}\n\n'.format(c=err) +
-        '\n slugs stdout:\n\n {out}\n\n'.format(out=out))
-    logger.debug(msg)
+    _, err = p.communicate()
+    f.close()
+    #msg = (
+    #    '\n slugs return code: {c}\n\n'.format(c=p.returncode) +
+    #    '\n slugs stderr: {c}\n\n'.format(c=err) +
+    #    '\n slugs stdout:\n\n {out}\n\n'.format(out=out))
+    #logger.debug(msg)
+    #details_log.info(out)
     # error ?
     if p.returncode != 0:
-        raise Exception(msg)
+        raise Exception(p.returncode)
     realizable = 'Specification is realizable' in err
     # check sanity
     if not realizable:
         assert 'Specification is unrealizable' in err
-    return realizable, out
+    return realizable
