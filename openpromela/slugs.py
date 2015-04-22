@@ -1,11 +1,13 @@
 """Interface to `slugs` synthesizer."""
 from __future__ import absolute_import
+from __future__ import print_function
 import datetime
 import json
 import logging
 import os
 import pprint
 import subprocess
+import sys
 import time
 import tempfile
 import textwrap
@@ -162,15 +164,18 @@ def _call_slugs(filename, symbolic=True, bddfile=None, make=True):
             user, system = proc.cpu_times()
             rss, vms = proc.memory_info()
             t = user + system
-            dt = datetime.timedelta(seconds=t)
+            dt = datetime.timedelta(seconds=round(t, 1))
             s = 'time: {dt}, rss: {rss}, vms: {vms}'.format(
                 dt=dt,
                 rss=humanize.naturalsize(rss),
                 vms=humanize.naturalsize(vms))
             slugs_log.info(s)
+            print(s, end='\r')
+            sys.stdout.flush()
         except psutil.AccessDenied:
             logger.debug('slugs has terminated already.')
         time.sleep(1.0)
+    print(s)
     slugs_log.info('slugs returned')
     out, err = p.communicate()
     msg = (
