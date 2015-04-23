@@ -22,7 +22,7 @@ install_requires = [
     'networkx >= 1.9.1',
     'omega >= 0.0.1',
     'ply == 3.4',
-    'promela >= 0.0.1'
+    'promela >= 0.0.1',
     'psutil >= 2.2.0',
     'subprocess32 >= 3.2.6']
 
