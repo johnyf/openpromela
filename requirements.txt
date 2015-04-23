@@ -1,0 +1,17 @@
+dd==0.0.3
+humanize==0.5.1
+natsort==3.5.3
+https://github.com/networkx/networkx/archive/master.zip
+# omega
+ply==3.4
+https://github.com/johnyf/promela/archive/dev.zip
+psutil==2.2.1
+subprocess32==3.2.6
+
+
+# dev
+ipython==1.2.1
+matplotlib==1.4.3
+nose==1.3.4
+pyparsing==2.0.3
+http://pydot.googlecode.com/files/pydot-1.0.28.tar.gz
