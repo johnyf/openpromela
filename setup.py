@@ -14,6 +14,16 @@ version = '{major}.{minor}.{micro}'.format(
 s = (
     '# This file was generated from setup.py\n'
     "version = '{version}'\n").format(version=version)
+install_requires = [
+    'dd >= 0.0.3',
+    'humanize >= 0.5.1',
+    'natsort >= 3.5.3',
+    'networkx >= 1.9.1',
+    'omega >= 0.0.1',
+    'ply == 3.4',
+    'promela >= 0.0.1'
+    'psutil >= 2.2.0',
+    'subprocess32 >= 3.2.6']
 
 
 def build_parser_table():
@@ -27,10 +37,7 @@ def build_parser_table():
 if __name__ == '__main__':
     with open(VERSION_FILE, 'w') as f:
         f.write(s)
-    pip.main([
-        'install',
-        'psutil >= 2.2.0',
-        'humanize >= 0.5.1'])
+    pip.main(['install'] + install_requires)
     build_parser_table()
     setup(
         name='openpromela',
@@ -41,10 +48,7 @@ if __name__ == '__main__':
         author_email='jfilippidis@gmail.com',
         url='https://github.com/johnyf/openpromela',
         license='BSD',
-        install_requires=[
-            'promela >= 0.0.1',
-            'networkx >= 1.9.1',
-            'psutil >= 2.2.0'],
+        install_requires=install_requires,
         tests_require=['nose'],
         packages=['openpromela'],
         package_dir={'openpromela': 'openpromela'},
