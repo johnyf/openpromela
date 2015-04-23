@@ -1,0 +1,21 @@
+# from pypi
+pip==6.1.1
+humanize==0.5.1
+natsort==3.5.3
+psutil==2.2.1
+subprocess32==3.2.6
+
+
+# dev versions
+https://github.com/johnyf/dd/archive/master.zip
+https://github.com/johnyf/omega/archive/master.zip
+https://github.com/johnyf/promela/archive/master.zip
+
+
+# dev tools
+coveralls
+ipython==1.2.1
+matplotlib==1.4.3
+nose==1.3.4
+pyparsing==2.0.3
+http://pydot.googlecode.com/files/pydot-1.0.28.tar.gz

@@ -31,7 +31,7 @@ ospin --help
 Installation
 ============
 
-The Python dependencies can be installed using `pip`:
+The Python dependencies can be installed using `pip >= 6.1.1`:
 
 ```
 pip install -r requirements.txt
