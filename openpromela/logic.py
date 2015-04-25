@@ -607,15 +607,20 @@ class AST(object):
 
     class Unary(ast.Unary):
         def to_logic(self, *arg, **kw):
-            boolean_unary_operators = {'X', '!'}
-            if self.operator in boolean_unary_operators:
-                c = 'boolean'
-            else:
-                c = 'numerical'
             x, xc = self.operands[0].to_logic(*arg, **kw)
-            s = '({op} {x})'.format(op=self.operator, x=x)
-            if xc == 'boolean':
+            boolean_operators = (
+                '!', '-X', '--X',
+                '[]', '-[]', '<>', '-<>')
+            if self.operator in ('X', '~'):
+                c = xc
+            elif self.operator in boolean_operators:
                 c = 'boolean'
+            elif self.operator == '-':
+                c = 'numerical'
+            else:
+                raise Exception(
+                    'unknown operator "{op}"'.format(op=self.operator))
+            s = '({op} {x})'.format(op=self.operator, x=x)
             return (s, c)
 
         def to_guard(self, t, pid, assume, primed, negated):
