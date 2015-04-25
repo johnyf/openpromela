@@ -844,6 +844,28 @@ def test_sync():
     assert mealy is None
 
 
+def test_collect_primed_vars():
+    # add var to symbol table
+    pid = 'global'
+    player = 'sys'
+    t = logic.Table()
+    t.add_var(pid, 'y', 'y', 'boolean', 'boolean', True, player)
+    # primed var
+    e = expr_parser.parse("y' < 2")
+    primed = logic.collect_primed_vars(e.expr, t, pid, player)
+    (r,) = primed
+    scope, node = r
+    assert scope == 'global', scope
+    assert str(node) == 'y', node
+    # prefix operator for "next"
+    e = expr_parser.parse("(X y) < 2")
+    primed = logic.collect_primed_vars(e.expr, t, pid, player)
+    (r,) = primed
+    scope, node = r
+    assert scope == 'global', scope
+    assert str(node) == 'y', node
+
+
 def slugsin_parser(s, t):
     """Helper that converts prefix to infix syntax for readability."""
     slugs_table = t.to_slugs()
