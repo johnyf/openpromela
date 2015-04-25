@@ -1397,7 +1397,8 @@ def collect_primed_vars(expr, t, pid, player):
             if c and d['owner'] == player:
                 p.add((varpid, u))
         # context of next operator
-        c = isinstance(u, AST.Next) or c
+        if hasattr(u, 'operator'):
+            c = c or u.operator == 'X'
         Q.extend((v, c) for v in g.successors_iter(u))
     return p
 
