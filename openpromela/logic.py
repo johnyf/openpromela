@@ -2049,7 +2049,8 @@ def dump_ltl_to_json(spc):
 def command_line_wrapper():
     """Entry point available as `ospin` script."""
     logs = {'openpromela.logic',
-            'openpromela.bitvector'}
+            'openpromela.bitvector',
+            'promela.yacc.parser'}
     slugs_log_name = 'openpromela.bitvector.slugs'
     debug_log_file = 'debug_log.txt'
     p = argparse.ArgumentParser(
