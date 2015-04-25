@@ -32,6 +32,14 @@ logging.getLogger('promela.ast').setLevel('ERROR')
 logging.getLogger('astutils').setLevel('ERROR')
 
 
+class Parser(logic.Parser):
+    start = 'full_expr'
+    tabmodule = 'expr_parser'
+
+
+expr_parser = Parser()
+
+
 def test_conj():
     f = logic.conj
     assert f(['a', 'b']) == '(a) & (b)'
@@ -848,11 +856,8 @@ def slugsin_parser(s, t):
 
 
 def scaffold():
-    class Parser(logic.Parser):
-        start = 'full_expr'
-    parser = Parser()
     e = "(x == y)'"
-    tree = parser.parse(e).expr
+    tree = expr_parser.parse(e).expr
     print(repr(tree))
     t = logic.Table()
     t.add_var(pid=0, name='x', flatname='pid0_x',
