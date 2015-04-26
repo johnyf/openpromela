@@ -26,21 +26,25 @@ slugs_log = logging.getLogger(__name__ + '.slugs')
 details_log = logging.getLogger(__name__ + '.details')
 SLUGS_SPEC = 'slugs.txt'
 SLUGS_NICE = 'slugs_readable.txt'
-BDD_FILE = 'bdd.txt'
+STRATEGY_FILE = 'slugs_strategy.txt'
 
 
-def synthesize(spec, symbolic=True, bddfile=None, make=True):
+def synthesize(spec, symbolic=True, filename=None, make=True):
     """Return strategy satisfying the specification `spec`.
 
     @param spec: first-order Street(1)
     @type spec: `symbolic.Automaton`
     @param symbolic: select between symbolic and enumerated transducer
-    @param bddfile: CUDD dumps the strategy in this file
+    @param filename: dump strategy in this file
+        If symbolic, then this is a `dddmp` file (see `cudd`).
+        If enumerated, then this is a `json` file (see `gr1c`).
     @param make: if `False`, then only check realizability
 
     @return: If realizable return synthesized strategy, otherwise `None`.
     @rtype: `automata.Transducer` or `symbolic.Automaton`
     """
+    if filename is None:
+        strategy_file = STRATEGY_FILE
     logger.info('++ compile LTL to slugsin\n')
     aut = _symbolic._bitblast(spec)
     s = _to_slugs(aut)
@@ -57,8 +61,7 @@ def synthesize(spec, symbolic=True, bddfile=None, make=True):
     logger.info('\n\n spec:\n\n {spec}'.format(
         spec=spec) + '\n\n slugs in:\n\n {s}\n'.format(s=s))
     logger.info('-- done compiling to slugsin')
-    realizable = _call_slugs(
-        fin.name, symbolic=symbolic, bddfile=bddfile, make=make)
+    realizable = _call_slugs(fin.name, symbolic, strategy_file, make)
     os.unlink(fin.name)
     # logger.debug('slugs output:\n{out}'.format(out=out))
     if realizable:
@@ -70,8 +73,10 @@ def synthesize(spec, symbolic=True, bddfile=None, make=True):
         return realizable
     if not realizable:
         return None
-    '''
-    g = load_strategy(out)
+    # enumerated strategy
+    with open(strategy_file, 'r') as f:
+        out = f.read()
+        g = load_strategy(out)
     logger.debug(
         ('loaded strategy with vertices:\n  {v}\n'
          'and edges:\n {e}\n').format(
@@ -79,7 +84,6 @@ def synthesize(spec, symbolic=True, bddfile=None, make=True):
             e=g.edges()))
     h = bitvector.bitfield_to_int_states(g, aut.vars)
     mealy = strategy_to_mealy(h, spec.init, aut.vars)
-    '''
     mealy = True
     return mealy
 
@@ -139,16 +143,15 @@ def _format_slugs_vars(dvars, owner, name):
     return '[{name}]\n{vars}\n\n'.format(name=name, vars='\n'.join(a))
 
 
-def _call_slugs(filename, symbolic=True, bddfile=None, make=True):
+def _call_slugs(filename, symbolic, strategy_file, make):
     """Call `slugs` and log memory usage and time."""
-    if bddfile is None:
-        bddfile = BDD_FILE
     options = ['slugs', filename]
     if make:
         if symbolic:
-            options.extend(['--symbolicStrategy', bddfile])
+            options.append('--symbolicStrategy')
         else:
             options.append('--jsonOutput')
+        options.append(strategy_file)
     else:
         options.append('--onlyRealizability')
     logger.debug('Calling: {cmd}'.format(cmd=' '.join(options)))
