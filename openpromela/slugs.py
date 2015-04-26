@@ -12,9 +12,7 @@ import time
 import tempfile
 import textwrap
 import humanize
-from omega import machines
 from omega.symbolic import symbolic as _symbolic
-from omega.logic import translation
 import natsort
 import networkx as nx
 from openpromela import bitvector
@@ -40,8 +38,10 @@ def synthesize(spec, symbolic=True, filename=None, make=True):
         If enumerated, then this is a `json` file (see `gr1c`).
     @param make: if `False`, then only check realizability
 
-    @return: If realizable return synthesized strategy, otherwise `None`.
-    @rtype: `automata.Transducer` or `symbolic.Automaton`
+    @return: If realizable, then return `True` for symbolic
+        strategies (load them separately),
+        and a `networkx.DiGraph` for enumerated strategies.
+        If unrealizable, then return `None`.
     """
     if filename is None:
         strategy_file = STRATEGY_FILE
@@ -83,9 +83,7 @@ def synthesize(spec, symbolic=True, filename=None, make=True):
             v='\n  '.join(str(x) for x in g.nodes(data=True)),
             e=g.edges()))
     h = bitvector.bitfield_to_int_states(g, aut.vars)
-    mealy = strategy_to_mealy(h, spec.init, aut.vars)
-    mealy = True
-    return mealy
+    return h
 
 
 def load_strategy(filename):
