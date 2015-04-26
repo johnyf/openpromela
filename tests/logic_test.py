@@ -1,4 +1,5 @@
 import logging
+import os
 from nose.tools import assert_raises
 from openpromela import logic, bitvector
 import openpromela.bdd
@@ -162,6 +163,21 @@ def test_assume_assert_realizability():
 def run_single():
     mealy = logic.synthesize(code['sys again'])
     print mealy
+
+
+def test_bdd_filename():
+    c = '''
+    proctype foo(){
+        int(0, 50) x;
+        do
+        :: x' == x + 1
+        :: x = x - 1
+        od
+    }
+    '''
+    fname = 'mybdd.txt'
+    assert logic.synthesize(c, filename=fname, symbolic=True)
+    assert os.path.isfile(fname)
 
 
 def test_executability():
