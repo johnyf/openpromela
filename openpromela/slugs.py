@@ -25,6 +25,7 @@ details_log = logging.getLogger(__name__ + '.details')
 SLUGS_SPEC = 'slugs.txt'
 SLUGS_NICE = 'slugs_readable.txt'
 STRATEGY_FILE = 'slugs_strategy.txt'
+SLUGS_LOG_FILE = 'slugs_details.txt'
 
 
 def synthesize(spec, symbolic=True, filename=None, make=True):
@@ -63,11 +64,6 @@ def synthesize(spec, symbolic=True, filename=None, make=True):
     logger.info('-- done compiling to slugsin')
     realizable = _call_slugs(fin.name, symbolic, strategy_file, make)
     os.unlink(fin.name)
-    # logger.debug('slugs output:\n{out}'.format(out=out))
-    if realizable:
-        logger.info('realizable')
-    else:
-        logger.info('not realizable')
     if not realizable:
         return None
     # symbolic strategies may be large BDD files, so loaded separately
@@ -153,7 +149,7 @@ def _call_slugs(filename, symbolic, strategy_file, make):
     else:
         options.append('--onlyRealizability')
     logger.debug('Calling: {cmd}'.format(cmd=' '.join(options)))
-    f = open('slugs_details.txt', 'w')
+    f = open(SLUGS_LOG_FILE, 'w')
     try:
         p = subprocess32.Popen(
             options,
@@ -196,8 +192,13 @@ def _call_slugs(filename, symbolic, strategy_file, make):
     # error ?
     if p.returncode != 0:
         raise Exception(p.returncode)
-    realizable = 'Specification is realizable' in err
-    # check sanity
-    if not realizable:
-        assert 'Specification is unrealizable' in err
+    # was realizable ?
+    if 'Specification is realizable' in err:
+        realizable = True
+        logger.info('realizable')
+    elif 'Specification is unrealizable' in err:
+        realizable = False
+        logger.info('not realizable')
+    else:
+        raise Exception('slugs stderr does not say whether realizable')
     return realizable
