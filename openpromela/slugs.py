@@ -70,11 +70,11 @@ def synthesize(spec, symbolic=True, filename=None, make=True):
         logger.info('realizable')
     else:
         logger.info('not realizable')
-    # symbolic strategies not loaded from file yet
-    if symbolic:
-        return realizable
     if not realizable:
         return None
+    # symbolic strategies may be large BDD files, so loaded separately
+    if symbolic:
+        return realizable
     # enumerated strategy
     with open(strategy_file, 'r') as f:
         out = f.read()
