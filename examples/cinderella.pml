@@ -11,10 +11,10 @@
  * This is done to avoid fractions.
  * The result is equivalent.
  */
-#define n 6
-#define k 10
-#define b 29
-#define c 1
+#define n 5
+#define k 4
+#define b 7
+#define c 2
 
 
 free env int(0, k) more[n];
@@ -24,7 +24,7 @@ sys int(0, n) start;
 
 /* the stepmother pours k more liters in every turn */
 assume ltl { [](
-	more[0] + more[1] + more[2] + more[3] + more[4] + more[5] <= k
+	more[0] + more[1] + more[2] + more[3] + more[4] <= k
 ) }
 
 
@@ -39,19 +39,19 @@ assert sys proctype cinderella(){
 		:: (i < c);
 			if
 			:: (start + i < n);
-				bucket[start + i] = 0
+				bucket[start + i] = more[start + i]
 			:: else;
-				bucket[start + i - n] = 0
+				bucket[start + i - n] = more[start + i - n]
 			fi;
 			i = i + 1
-		:: else; break
-		od;
-		/* adds incoming water */
-		i = 0;
-		do
-		:: (i < n);
-			bucket[i] = bucket[i] + more[i];
-			i = i + 1;
+		:: (c <= i) && (i < n);
+			if
+			:: (start + i < n);
+				bucket[start + i] = bucket[start + i] + more[start + i]
+			:: else;
+				bucket[start + i - n] = bucket[start + i - n] + more[start + i - n]
+			fi;
+			i = i + 1
 		:: else; break
 		od;
 		}
