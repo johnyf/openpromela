@@ -826,7 +826,7 @@ def products_to_logic(products, global_defs):
     proctypes, n_keys, top_ps = flatten_top_async(products, t)
     # find the players with atomic statements
     atomic = who_has_atomic(proctypes)
-    pids = add_processes(proctypes, atomic, t)
+    pids = add_processes(proctypes, atomic, t, global_defs)
     # add key vars to table
     # TODO: optimize key domain sizes
     max_key = 0
@@ -1023,7 +1023,7 @@ def has_atomic(g):
                for u, d in g.nodes_iter(data=True))
 
 
-def add_processes(proctypes, atomic, t):
+def add_processes(proctypes, atomic, t, global_defs):
     """Instantiate processes for each proctype in `proctypes`."""
     # instantiate each proctype
     pids = dict()
@@ -1031,14 +1031,14 @@ def add_processes(proctypes, atomic, t):
         # above it is ensured that in sync products only 1 active
         for j in xrange(g.active):
             logger.info('\t instance {j}'.format(j=j))
-            process_to_logic(ps, gid, lid, g, t, atomic, pids)
+            process_to_logic(ps, gid, lid, g, t, atomic, pids, global_defs)
         logger.info(
             '-- done with proctype "{name}".\n'.format(name=g.name))
     return pids
 
 
 # a process is an instance of a proctype
-def process_to_logic(ps, gid, lid, g, t, atomic, pids):
+def process_to_logic(ps, gid, lid, g, t, atomic, pids, global_defs):
     _, max_gid = t.products[ps]['dom']
     pid = t.add_pid(g.name, g.owner, ps, gid, lid, assume=g.assume)
     pc = pid_to_pc(pid)
@@ -1047,7 +1047,7 @@ def process_to_logic(ps, gid, lid, g, t, atomic, pids):
     h = nx.MultiDiGraph()
     var2edges = add_edge_formulae(h, g, t, pid)
     trans = graph_to_logic(h, t, pid, max_gid, atomic)
-    notexe = form_notexe_condition(g, t, pid)
+    notexe = form_notexe_condition(g, t, pid, global_defs)
     progress = collect_progress_labels(g, t, pid)
     t.add_program_counter(pid, len(h), g.owner, g.root)
     # add "next value" program counter
@@ -1131,7 +1131,8 @@ def add_edge_formulae(h, g, t, pid):
         h.add_node(u, context=d['context'])
     if logger.getEffectiveLevel() == 1:
         ast.dump_graph(
-            g, fname='pid_{pid}_pg.pdf'.format(pid=pid), edge_label='stmt')
+            g, fname='pid_{pid}_pg.pdf'.format(pid=pid),
+            edge_label='stmt', node_label='context')
         ast.dump_graph(
             h, fname='pid_{pid}.pdf'.format(pid=pid), edge_label='formula')
     logger.info('-- done annotating with formulae.\n')
@@ -1232,7 +1233,7 @@ def form_exclusive_expr(context, assume, gid, max_gid):
     return exclusive
 
 
-def form_notexe_condition(g, t, pid):
+def form_notexe_condition(g, t, pid, global_defs):
     """Return map from nodes to blocking conditions.
 
     @return: Map from nodes to Boolean formulae.
@@ -1241,7 +1242,7 @@ def form_notexe_condition(g, t, pid):
     """
     pc = pid_to_pc(pid)
     _disj = dict()
-    for u in g:
+    for u, du in g.nodes_iter(data=True):
         r = list()
         # at least one outedge always executable ?
         for _, v, key, d in g.edges_iter(u, data=True, keys=True):
@@ -1252,11 +1253,17 @@ def form_notexe_condition(g, t, pid):
             r.append(e)
             if e == 'True':
                 break
+        # if executed, is it atomic transition ?
+        if du['context'] == 'atomic':
+            assert g.assume == 'sys'
+            freeze = constrain_global_declarative_vars(t, global_defs, 'env')
+        else:
+            freeze = 'True'
         # u blocks if no executability condition is True
-        _disj[u] = disj(r)
+        _disj[u] = (disj(r), freeze)
     return disj(
-        '({pc} = {u}) & !({b})'.format(pc=pc, u=u, b=b)
-        for u, b in _disj.iteritems())
+        '({pc} = {u}) & {f} & !({b})'.format(pc=pc, u=u, b=b, f=freeze)
+        for u, (b, freeze) in _disj.iteritems())
 
 
 def graph_to_guards(g, t, pid):
@@ -1634,6 +1641,30 @@ def constrain_local_declarative_vars(t):
     return c['env'], c['sys']
 
 
+def constrain_global_declarative_vars(t, global_defs, player):
+    """Return constraints for all free global vars.
+
+    Effective when other player takes an atomic transition.
+    """
+    logger.info('++ constraining free global vars...')
+    c = list()
+    for vardef in global_defs:
+        name = vardef.name
+        assert name in t.scopes['global'], (name, t)
+        d = t.scopes['global'][name]
+        if not d['free']:
+            logger.debug('"{var}" not free variable'.format(var=name))
+            continue
+        if d['owner'] != player:
+            continue
+        # declarative global var
+        s = _invariant(d['flatname'], d['dom'], d['length'])
+        c.append(s)
+    r = conj(c)
+    logger.info('-- done with free global vars.\n')
+    return r
+
+
 def add_process_scheduler(t, pids, player, atomic, top_ps):
     logger.info('adding process scheduler...')
     assert player in {'env', 'sys'}
@@ -1914,7 +1945,7 @@ def compile_spec(code, strict_atomic=True):
      sys_safe, env_prog, sys_prog, atomic, top_ps) = \
         products_to_logic(products, global_defs)
     ltl_spc = transform_ltl_blocks(ltl, vartable)
-    t = vartable.flatten()
+    flat_table = vartable.flatten()
     # conjoin with ltl blocks
     env_ltl_init = ltl_spc['assume']['init']
     env_ltl_safe = ltl_spc['assume']['G']
@@ -1930,12 +1961,15 @@ def compile_spec(code, strict_atomic=True):
     if deactivate:
         ps = top_ps['sys']
         _, max_gid = vartable.products[ps]['dom']
+        freeze_globals = constrain_global_declarative_vars(
+            vartable, global_defs, 'env')
         env_ltl_safe = (
-            '( (pm_sys & ((X {ps}) = ex_sys) &'
-            ' (ex_sys < {max_gid})) | {safe})').format(
+            '(ite (pm_sys & ((X {ps}) = ex_sys) &'
+            ' (ex_sys < {max_gid})), {freeze_globals}, {safe})').format(
                 max_gid=max_gid,
                 safe=env_ltl_safe,
-                ps=ps)
+                ps=ps,
+                freeze_globals=freeze_globals)
         sys_ltl_safe = (
             '( ( ((X {ps}) = ex_sys) &'
             ' (ex_sys < {max_gid})) | {safe})').format(
@@ -1956,13 +1990,15 @@ def compile_spec(code, strict_atomic=True):
         sys_prog = list()
     # bundle
     spc = _symbolic.Automaton()
-    spc.vars = t
+    spc.vars = flat_table
     spc.init['env'] = env_init
     spc.init['sys'] = sys_init
     spc.action['env'] = env_safe
     spc.action['sys'] = sys_safe
     spc.win['env'] = env_prog
     spc.win['sys'] = sys_prog
+    if logger.getEffectiveLevel() < logging.DEBUG:
+        dump_ltl_to_json(spc)
     # past -> future LTL
     spc = map_to_future(spc)
     # dump table and spec to file
@@ -1972,10 +2008,8 @@ def compile_spec(code, strict_atomic=True):
         'Variable types for bitblaster:\n\n'
         '{vartypes}\n').format(
             table=vartable, spc=spc,
-            vartypes=pprint.pformat(t))
+            vartypes=pprint.pformat(flat_table))
     logger.info(s)
-    if logger.getEffectiveLevel() < logging.DEBUG:
-        dump_ltl_to_json(spc)
     return spc
 
 
@@ -2050,6 +2084,7 @@ def command_line_wrapper():
     """Entry point available as `ospin` script."""
     logs = {'openpromela.logic',
             'openpromela.bitvector',
+            'openpromela.slugs',
             'promela.yacc.parser'}
     slugs_log_name = 'openpromela.bitvector.slugs'
     debug_log_file = 'debug_log.txt'

@@ -4,29 +4,16 @@ from openpromela import logic, bitvector
 import openpromela.bdd
 
 
-BIT_LOG = 'bitblaster.txt'
+logger = logging.getLogger(__name__)
 # bit blasting log
+BIT_LOG = 'bitblaster.txt'
 bit_log = logging.getLogger('openpromela.bitvector')
 h = logging.FileHandler(BIT_LOG, mode='w')
-h.setLevel(logging.DEBUG)
+h.setLevel(logging.ERROR)
 bit_log.addHandler(h)
 
-h = logging.StreamHandler()
+logging.getLogger('promela.yacc').addHandler(h)
 
-log = logging.getLogger('openpromela.slugs')
-# log.setLevel(5)
-# log.addHandler(h)
-
-log = logging.getLogger('openpromela.logic')
-log.setLevel(1)
-
-log = logging.getLogger('promela.ast')
-log.setLevel(1)
-
-# Promela parser
-log = logging.getLogger('promela.yacc.parser')
-log.setLevel('ERROR')
-#
 # avoid nose dumping PDFs
 logging.getLogger('promela.ast').setLevel('ERROR')
 logging.getLogger('astutils').setLevel('ERROR')
@@ -34,7 +21,12 @@ logging.getLogger('astutils').setLevel('ERROR')
 
 class Parser(logic.Parser):
     start = 'full_expr'
-    tabmodule = 'expr_parser'
+    tabmodule = 'expr_parsetab'
+
+    def build(self):
+        # silence warnings about unreachable rules
+        # above `full_expr`
+        super(Parser, self).build(errorlog=logger, write_tables=True)
 
 
 expr_parser = Parser()
@@ -843,6 +835,33 @@ def test_collect_primed_vars():
     scope, node = r
     assert scope == 'global', scope
     assert str(node) == 'y', node
+
+
+def test_constrain_global_declarative_vars():
+    t = logic.Table()
+    y = logic.AST.VarDef('y', 'bool', owner='env', free=True)
+    y.insert_logic_var(t, 'sys', 'global')
+    z = logic.AST.VarDef('z', 'bool', owner='env', free=True)
+    z.insert_logic_var(t, 'sys', 'global')
+    w = logic.AST.VarDef('w', 'bool', owner='sys', free=True)
+    w.insert_logic_var(t, 'sys', 'global')
+    global_defs = [y, z, w]
+    r = logic.constrain_global_declarative_vars(t, global_defs, 'env')
+    s = (
+        '(((X pidglobal_y) <-> pidglobal_y)) &'
+        ' (((X pidglobal_z) <-> pidglobal_z))')
+    assert r == s, r
+    # env must freeze
+    c = '''
+    free env bit x;
+
+    proctype foo(){
+        do
+        :: atomic{ skip; x' == x }
+        od
+    }
+    '''
+    assert logic.synthesize(c) is not None
 
 
 def slugsin_parser(s, t):

@@ -12,6 +12,7 @@ h = logging.StreamHandler()
 log = logging.getLogger('openpromela.bitvector')
 log.setLevel(logging.WARNING)
 log.addHandler(h)
+logging.getLogger('astutils').setLevel('ERROR')
 
 # TODO: test truncation, test ALU up to 32 bits
 
@@ -65,12 +66,14 @@ def test_flatten_comparator():
     # '<' comparator
     f = parser.parse('a < 1').flatten(t=t)
     # print(f)
-    assert (f == ('$ 5 '
+    assert (f == ('$ 7 '
                   '^ ^ a0 ! 1 1 '
                   '| & a0 ! 1 & ^ a0 ! 1 1 '
                   '^ ^ a1 ! 0 ? 1 '
                   '| & a1 ! 0 & ^ a1 ! 0 ? 1 '
-                  '^ ! ^ a1 0 ? 3'))
+                  '^ ^ a1 ! 0 ? 3 '
+                  '| & a1 ! 0 & ^ a1 ! 0 ? 3 '
+                  '^ ! ^ a1 0 ? 5')), f
     # TODO: more bits, larger numbers
 
 
@@ -79,11 +82,13 @@ def test_flatten_arithmetic():
     # addition
     mem = list()
     res = parser.parse('a + 1').flatten(t=t, mem=mem)
-    assert res == ['? 0', '? 2']
+    assert res == ['? 0', '? 2', '? 4'], res
     assert mem == ['^ ^ a0 1 0',
                    '| & a0 1 & ^ a0 1 0',
                    '^ ^ a1 0 ? 1',
-                   '| & a1 0 & ^ a1 0 ? 1']
+                   '| & a1 0 & ^ a1 0 ? 1',
+                   '^ ^ a1 0 ? 3',
+                   '| & a1 0 & ^ a1 0 ? 3'], mem
     # TODO: subtraction
 
 

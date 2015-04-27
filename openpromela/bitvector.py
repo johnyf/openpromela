@@ -497,7 +497,7 @@ def adder_subtractor(x, y, add=True, start=0):
     assert isinstance(y, list)
     dowhat = 'add' if add else 'subtract'
     logger.info('++ {what}...'.format(what=dowhat))
-    p, q = equalize_width(x, y)
+    p, q = equalize_width(x, y, extend_by=1)
     assert len(p) == len(q)
     logger.debug('p = {p}\nq = {q}'.format(p=p, q=q))
     # invert
@@ -726,13 +726,14 @@ def twos_complement_to_int(bits):
     return -r[-1] * 2**n + sum(b * 2**i for i, b in enumerate(r[:-1]))
 
 
-def equalize_width(x, y):
+def equalize_width(x, y, extend_by=0):
     """Return bitvectors of equal len by applying sign extension."""
     logger.info('++ equalize width...')
     logger.debug(
         'before equalization:\n\t x = {x}\n\t y = {y}'.format(
             x=x, y=y))
     n = max(len(x), len(y))
+    n += extend_by
     p = sign_extension(x, n)
     q = sign_extension(y, n)
     logger.debug('after extension:\n\t x = {p}\n\t y = {q}'.format(
