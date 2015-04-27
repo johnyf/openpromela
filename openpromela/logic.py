@@ -1131,7 +1131,8 @@ def add_edge_formulae(h, g, t, pid):
         h.add_node(u, context=d['context'])
     if logger.getEffectiveLevel() == 1:
         ast.dump_graph(
-            g, fname='pid_{pid}_pg.pdf'.format(pid=pid), edge_label='stmt')
+            g, fname='pid_{pid}_pg.pdf'.format(pid=pid),
+            edge_label='stmt', node_label='context')
         ast.dump_graph(
             h, fname='pid_{pid}.pdf'.format(pid=pid), edge_label='formula')
     logger.info('-- done annotating with formulae.\n')
