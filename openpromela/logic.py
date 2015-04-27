@@ -826,7 +826,7 @@ def products_to_logic(products, global_defs):
     proctypes, n_keys, top_ps = flatten_top_async(products, t)
     # find the players with atomic statements
     atomic = who_has_atomic(proctypes)
-    pids = add_processes(proctypes, atomic, t)
+    pids = add_processes(proctypes, atomic, t, global_defs)
     # add key vars to table
     # TODO: optimize key domain sizes
     max_key = 0
@@ -1023,7 +1023,7 @@ def has_atomic(g):
                for u, d in g.nodes_iter(data=True))
 
 
-def add_processes(proctypes, atomic, t):
+def add_processes(proctypes, atomic, t, global_defs):
     """Instantiate processes for each proctype in `proctypes`."""
     # instantiate each proctype
     pids = dict()
@@ -1031,14 +1031,14 @@ def add_processes(proctypes, atomic, t):
         # above it is ensured that in sync products only 1 active
         for j in xrange(g.active):
             logger.info('\t instance {j}'.format(j=j))
-            process_to_logic(ps, gid, lid, g, t, atomic, pids)
+            process_to_logic(ps, gid, lid, g, t, atomic, pids, global_defs)
         logger.info(
             '-- done with proctype "{name}".\n'.format(name=g.name))
     return pids
 
 
 # a process is an instance of a proctype
-def process_to_logic(ps, gid, lid, g, t, atomic, pids):
+def process_to_logic(ps, gid, lid, g, t, atomic, pids, global_defs):
     _, max_gid = t.products[ps]['dom']
     pid = t.add_pid(g.name, g.owner, ps, gid, lid, assume=g.assume)
     pc = pid_to_pc(pid)
@@ -1047,7 +1047,7 @@ def process_to_logic(ps, gid, lid, g, t, atomic, pids):
     h = nx.MultiDiGraph()
     var2edges = add_edge_formulae(h, g, t, pid)
     trans = graph_to_logic(h, t, pid, max_gid, atomic)
-    notexe = form_notexe_condition(g, t, pid)
+    notexe = form_notexe_condition(g, t, pid, global_defs)
     progress = collect_progress_labels(g, t, pid)
     t.add_program_counter(pid, len(h), g.owner, g.root)
     # add "next value" program counter
@@ -1232,7 +1232,7 @@ def form_exclusive_expr(context, assume, gid, max_gid):
     return exclusive
 
 
-def form_notexe_condition(g, t, pid):
+def form_notexe_condition(g, t, pid, global_defs):
     """Return map from nodes to blocking conditions.
 
     @return: Map from nodes to Boolean formulae.
