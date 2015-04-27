@@ -5,29 +5,16 @@ from openpromela import logic, bitvector
 import openpromela.bdd
 
 
-BIT_LOG = 'bitblaster.txt'
+logger = logging.getLogger(__name__)
 # bit blasting log
+BIT_LOG = 'bitblaster.txt'
 bit_log = logging.getLogger('openpromela.bitvector')
 h = logging.FileHandler(BIT_LOG, mode='w')
-h.setLevel(logging.DEBUG)
+h.setLevel(logging.ERROR)
 bit_log.addHandler(h)
 
-h = logging.StreamHandler()
+logging.getLogger('promela.yacc').addHandler(h)
 
-log = logging.getLogger('openpromela.slugs')
-# log.setLevel(5)
-# log.addHandler(h)
-
-log = logging.getLogger('openpromela.logic')
-log.setLevel(1)
-
-log = logging.getLogger('promela.ast')
-log.setLevel(1)
-
-# Promela parser
-log = logging.getLogger('promela.yacc.parser')
-log.setLevel('ERROR')
-#
 # avoid nose dumping PDFs
 logging.getLogger('promela.ast').setLevel('ERROR')
 logging.getLogger('astutils').setLevel('ERROR')

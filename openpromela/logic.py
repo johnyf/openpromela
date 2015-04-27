@@ -2098,6 +2098,7 @@ def command_line_wrapper():
     """Entry point available as `ospin` script."""
     logs = {'openpromela.logic',
             'openpromela.bitvector',
+            'openpromela.slugs',
             'promela.yacc.parser'}
     slugs_log_name = 'openpromela.bitvector.slugs'
     debug_log_file = 'debug_log.txt'
