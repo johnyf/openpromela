@@ -896,6 +896,17 @@ def test_constrain_global_declarative_vars():
         '(((X pidglobal_y) <-> pidglobal_y)) &'
         ' (((X pidglobal_z) <-> pidglobal_z))')
     assert r == s, r
+    # env must freeze
+    c = '''
+    free env bit x;
+
+    proctype foo(){
+        do
+        :: atomic{ skip; x' == x }
+        od
+    }
+    '''
+    assert logic.synthesize(c) is not None
 
 
 def slugsin_parser(s, t):

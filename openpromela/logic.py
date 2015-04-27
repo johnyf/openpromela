@@ -1241,7 +1241,7 @@ def form_notexe_condition(g, t, pid, global_defs):
     """
     pc = pid_to_pc(pid)
     _disj = dict()
-    for u in g:
+    for u, du in g.nodes_iter(data=True):
         r = list()
         # at least one outedge always executable ?
         for _, v, key, d in g.edges_iter(u, data=True, keys=True):
@@ -1252,11 +1252,17 @@ def form_notexe_condition(g, t, pid, global_defs):
             r.append(e)
             if e == 'True':
                 break
+        # if executed, is it atomic transition ?
+        if du['context'] == 'atomic':
+            assert g.assume == 'sys'
+            freeze = constrain_global_declarative_vars(t, global_defs, 'env')
+        else:
+            freeze = 'True'
         # u blocks if no executability condition is True
-        _disj[u] = disj(r)
+        _disj[u] = (disj(r), freeze)
     return disj(
-        '({pc} = {u}) & !({b})'.format(pc=pc, u=u, b=b)
-        for u, b in _disj.iteritems())
+        '({pc} = {u}) & {f} & !({b})'.format(pc=pc, u=u, b=b, f=freeze)
+        for u, (b, freeze) in _disj.iteritems())
 
 
 def graph_to_guards(g, t, pid):
