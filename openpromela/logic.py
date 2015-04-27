@@ -1634,6 +1634,30 @@ def constrain_local_declarative_vars(t):
     return c['env'], c['sys']
 
 
+def constrain_global_declarative_vars(t, global_defs, player):
+    """Return constraints for all free global vars.
+
+    Effective when other player takes an atomic transition.
+    """
+    logger.info('++ constraining free global vars...')
+    c = list()
+    for vardef in global_defs:
+        name = vardef.name
+        assert name in t.scopes['global'], (name, t)
+        d = t.scopes['global'][name]
+        if not d['free']:
+            logger.debug('"{var}" not free variable'.format(var=name))
+            continue
+        if d['owner'] != player:
+            continue
+        # declarative global var
+        s = _invariant(d['flatname'], d['dom'], d['length'])
+        c.append(s)
+    r = conj(c)
+    logger.info('-- done with free global vars.\n')
+    return r
+
+
 def add_process_scheduler(t, pids, player, atomic, top_ps):
     logger.info('adding process scheduler...')
     assert player in {'env', 'sys'}
@@ -1930,12 +1954,15 @@ def compile_spec(code, strict_atomic=True):
     if deactivate:
         ps = top_ps['sys']
         _, max_gid = vartable.products[ps]['dom']
+        freeze_globals = constrain_global_declarative_vars(
+            vartable, global_defs, 'env')
         env_ltl_safe = (
-            '( (pm_sys & ((X {ps}) = ex_sys) &'
-            ' (ex_sys < {max_gid})) | {safe})').format(
+            '(ite (pm_sys & ((X {ps}) = ex_sys) &'
+            ' (ex_sys < {max_gid})), {freeze_globals}, {safe})').format(
                 max_gid=max_gid,
                 safe=env_ltl_safe,
-                ps=ps)
+                ps=ps,
+                freeze_globals=freeze_globals)
         sys_ltl_safe = (
             '( ( ((X {ps}) = ex_sys) &'
             ' (ex_sys < {max_gid})) | {safe})').format(
