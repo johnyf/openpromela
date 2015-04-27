@@ -1997,6 +1997,8 @@ def compile_spec(code, strict_atomic=True):
     spc.action['sys'] = sys_safe
     spc.win['env'] = env_prog
     spc.win['sys'] = sys_prog
+    if logger.getEffectiveLevel() < logging.DEBUG:
+        dump_ltl_to_json(spc)
     # past -> future LTL
     spc = map_to_future(spc)
     # dump table and spec to file
@@ -2008,8 +2010,6 @@ def compile_spec(code, strict_atomic=True):
             table=vartable, spc=spc,
             vartypes=pprint.pformat(flat_table))
     logger.info(s)
-    if logger.getEffectiveLevel() < logging.DEBUG:
-        dump_ltl_to_json(spc)
     return spc
 
 
