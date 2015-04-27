@@ -33,23 +33,22 @@ assert sys proctype cinderella(){
 	do
 	:: atomic{
 		/* each turn, she empties c adjacent buckets */
-		((X start) < n);
-		i = 0;
+		(X start < n) && (X i == 0);
 		do
 		:: (i < c);
 			if
-			:: (start + i < n);
-				bucket[start + i] = more[start + i]
-			:: else;
-				bucket[start + i - n] = more[start + i - n]
+			:: (start + i < n) &&
+				(X bucket[start + i]) == more[start + i]
+			:: (start + i >= n) &&
+				(X bucket[start + i - n]) == more[start + i - n]
 			fi;
 			i = i + 1
 		:: (c <= i) && (i < n);
 			if
-			:: (start + i < n);
-				bucket[start + i] = bucket[start + i] + more[start + i]
-			:: else;
-				bucket[start + i - n] = bucket[start + i - n] + more[start + i - n]
+			:: (start + i < n) &&
+				(X bucket[start + i]) == bucket[start + i] + more[start + i]
+			:: (start + i >= n) &&
+				(X bucket[start + i - n]) == bucket[start + i - n] + more[start + i - n]
 			fi;
 			i = i + 1
 		:: else; break
