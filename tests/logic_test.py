@@ -35,7 +35,12 @@ logging.getLogger('astutils').setLevel('ERROR')
 
 class Parser(logic.Parser):
     start = 'full_expr'
-    tabmodule = 'expr_parser'
+    tabmodule = 'expr_parsetab'
+
+    def build(self):
+        # silence warnings about unreachable rules
+        # above `full_expr`
+        super(Parser, self).build(errorlog=logger, write_tables=True)
 
 
 expr_parser = Parser()
