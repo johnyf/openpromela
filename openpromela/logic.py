@@ -1945,7 +1945,7 @@ def compile_spec(code, strict_atomic=True):
      sys_safe, env_prog, sys_prog, atomic, top_ps) = \
         products_to_logic(products, global_defs)
     ltl_spc = transform_ltl_blocks(ltl, vartable)
-    t = vartable.flatten()
+    flat_table = vartable.flatten()
     # conjoin with ltl blocks
     env_ltl_init = ltl_spc['assume']['init']
     env_ltl_safe = ltl_spc['assume']['G']
@@ -1990,7 +1990,7 @@ def compile_spec(code, strict_atomic=True):
         sys_prog = list()
     # bundle
     spc = _symbolic.Automaton()
-    spc.vars = t
+    spc.vars = flat_table
     spc.init['env'] = env_init
     spc.init['sys'] = sys_init
     spc.action['env'] = env_safe
@@ -2006,7 +2006,7 @@ def compile_spec(code, strict_atomic=True):
         'Variable types for bitblaster:\n\n'
         '{vartypes}\n').format(
             table=vartable, spc=spc,
-            vartypes=pprint.pformat(t))
+            vartypes=pprint.pformat(flat_table))
     logger.info(s)
     if logger.getEffectiveLevel() < logging.DEBUG:
         dump_ltl_to_json(spc)
