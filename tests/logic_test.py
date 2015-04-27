@@ -882,6 +882,22 @@ def test_collect_primed_vars():
     assert str(node) == 'y', node
 
 
+def test_constrain_global_declarative_vars():
+    t = logic.Table()
+    y = logic.AST.VarDef('y', 'bool', owner='env', free=True)
+    y.insert_logic_var(t, 'sys', 'global')
+    z = logic.AST.VarDef('z', 'bool', owner='env', free=True)
+    z.insert_logic_var(t, 'sys', 'global')
+    w = logic.AST.VarDef('w', 'bool', owner='sys', free=True)
+    w.insert_logic_var(t, 'sys', 'global')
+    global_defs = [y, z, w]
+    r = logic.constrain_global_declarative_vars(t, global_defs, 'env')
+    s = (
+        '(((X pidglobal_y) <-> pidglobal_y)) &'
+        ' (((X pidglobal_z) <-> pidglobal_z))')
+    assert r == s, r
+
+
 def slugsin_parser(s, t):
     """Helper that converts prefix to infix syntax for readability."""
     slugs_table = t.to_slugs()
