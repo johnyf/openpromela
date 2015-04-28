@@ -114,12 +114,16 @@ def dom_to_width(dom):
 
 
 def _add_bitnames(t):
+    """Map each integer to a list of bit variables."""
     # str_to_int not needed, because there
     # are no string variables in Promela
     for var, d in t.iteritems():
         if d['type'] == 'int':
-            d['bitnames'] = ['{name}_{i}'.format(name=var, i=i)
-                             for i in xrange(d['width'])]
+            bits = ['{name}_{i}'.format(name=var, i=i)
+                    for i in xrange(d['width'])]
+            are_booleans = filter(t.__contains__, bits)
+            assert not are_booleans, (bits, t)
+            d['bitnames'] = bits
 
 
 def _check_data_types(t):

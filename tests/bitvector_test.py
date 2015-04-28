@@ -17,6 +17,20 @@ logging.getLogger('astutils').setLevel('ERROR')
 # TODO: test truncation, test ALU up to 32 bits
 
 
+def test_bitvector_name_conflicts():
+    # no conflict
+    t = {'x_1': dict(type='bool', owner='env'),
+         'x': dict(type='int', dom=(0, 1), owner='sys',
+                   signed=False, width=1)}
+    bv._add_bitnames(t)
+    assert 'bitnames' in t['x'], t
+    assert t['x']['bitnames'] == ['x_0'], t
+    # integer `x` mapped to `x_0`, conflict with Boolean `x_0`
+    t['x_0'] = t.pop('x_1')
+    with nt.assert_raises(AssertionError):
+        bv._add_bitnames(t)
+
+
 def test_bitfield_to_int_states():
     t = {'x': dict(type='bool'),
          'y': dict(type='int', signed=True, bitnames=['y0', 'y1', 'y2'])}
