@@ -423,7 +423,7 @@ class AST(object):
             else:
                 return 'numerical'
 
-        def to_logic(self, t, pid):
+        def to_logic(self, t, pid, *arg, **kw):
             d = find_var_in_scope(self.name, t, pid)
             context = self._context(d)
             # get index expr
@@ -502,7 +502,7 @@ class AST(object):
             return e
 
     class Assignment(ast.Assignment):
-        def to_logic(self, t, pid):
+        def to_logic(self, t, pid, *arg, **kw):
             flatname, var_context = self.var.to_logic(t, pid)
             value, val_context = self.value.to_logic(t, pid)
             if var_context == 'boolean' or val_context == 'boolean':
@@ -531,7 +531,7 @@ class AST(object):
             return 'True'
 
     class Else(ast.Else):
-        def to_logic(self, t, pid, assume):
+        def to_logic(self, t, pid, assume, *arg, **kw):
             c = [stmt.to_guard(t, pid, assume)
                  for stmt in self.other_guards]
             s = conj('! ({s})'.format(s=s) for s in c)
