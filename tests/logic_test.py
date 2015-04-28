@@ -901,6 +901,36 @@ def test_constrain_global_declarative_vars():
     assert logic.synthesize(c) is not None
 
 
+def test_remote_ref():
+    c = '''
+    proctype foo(){
+        bar @ critical
+    }
+
+    proctype bar(){
+        bit x;
+    critical:
+        if
+        :: x = x + 1
+        fi
+    }
+    '''
+    program = logic._parser.parse(c)
+    global_defs, products, ltl = program.to_table()
+    t = logic.products_to_logic(products, global_defs)[0]
+    proctypes = t.proctypes
+    assert len(proctypes) == 2, proctypes
+    foo = proctypes['foo']
+    g = foo['program_graph']
+    edges = g.edges(data=True)
+    (e,) = edges
+    u, v, d = e
+    stmt = d['stmt']
+    assert isinstance(stmt, logic.AST.Expression), stmt
+    f, _ = stmt.to_logic(t=t, pid=0)
+    assert f == '(pc1 = 1)', (f, t.pids)
+
+
 def slugsin_parser(s, t):
     """Helper that converts prefix to infix syntax for readability."""
     slugs_table = t.to_slugs()

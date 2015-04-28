@@ -658,6 +658,59 @@ class AST(object):
         def to_guard(self, *arg, **kw):
             return (str(self), False)
 
+    class RemoteRef(ast.RemoteRef):
+        def to_logic(self, t, *arg, **kw):
+            # find pid
+            name = self.proctype
+            pid = self.pid
+            assert name in t.proctypes, (name, t.proctypes)
+            dproc = t.proctypes[name]
+            g = dproc['program_graph']
+            n = g.active
+            if n == 0:
+                raise Exception(
+                    'No active instances of proctype "{p}"'.format(
+                        p=name))
+            if pid is None:
+                if n > 1:
+                    raise Exception(
+                        'More than one active instances of '
+                        'proctype "{p}"'.format(
+                            p=name))
+                assert n == 1, n
+                inst = dproc['instances']
+                assert len(inst) == 1, inst
+                pid = inst[0]
+            assert name == t.pids[pid]['proctype'], (name, t.pids)
+            pc = pid_to_pc(pid)
+            # find node with given label
+            nodes = set()
+            for u, d in g.nodes_iter(data=True):
+                labels = d.get('labels')
+                if labels is None:
+                    continue
+                if self.label in labels:
+                    nodes.add(u)
+            if not nodes:
+                raise Exception(
+                    'No nodes in proctype "{p}" are '
+                    'labeled with "{label}".'.format(
+                        p=name, label=self.label))
+            elif len(nodes) > 1:
+                raise Exception(
+                    'Multiple nodes in proctype "{p}" '
+                    'are labeled with "{label}".'.format(
+                        p=name, label=self.label))
+            assert len(nodes) == 1, nodes
+            (u,) = nodes
+            # formula
+            s = '({pc} = {u})'.format(pc=pc, u=u)
+            return (s, 'boolean')
+
+        def to_guard(self, *arg, **kw):
+            s, c = self.to_logic(*arg, **kw)
+            return (s, False)
+
 
 _parser = Parser()
 
@@ -1476,7 +1529,7 @@ def scaffold(u, g=None):
         for i, v in enumerate(u.operands):
             g.add_edge(u, v, key=i)
             scaffold(v, g)
-    elif isinstance(u, (AST.VarRef, AST.Integer, AST.Bool)):
+    elif isinstance(u, (ast.Terminal)):
         g.add_node(u)
     else:
         raise TypeError(
