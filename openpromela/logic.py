@@ -836,14 +836,16 @@ def products_to_logic(products, global_defs):
     t = Table()
     add_variables_to_table(t, global_defs,
                            pid='global', assume_context='sys')
-    proctypes, n_keys, top_ps = flatten_top_async(products, t)
+    n_keys, top_ps = flatten_top_async(products, t)
     # find the players with atomic statements
-    atomic = who_has_atomic(proctypes)
-    pids = add_processes(proctypes, atomic, t, global_defs)
+    atomic = who_has_atomic(t)
+    add_processes(atomic, t, global_defs)
+    pids = processes_to_logic(atomic, t, global_defs)
     # add key vars to table
     # TODO: optimize key domain sizes
     max_key = 0
-    for g, _, _, _ in proctypes:
+    for name, d in t.proctypes.iteritems():
+        g = d['program_graph']
         max_key = max(max_key, g.max_key)
     for assume, d in n_keys.iteritems():
         for owner, nk in d.iteritems():
@@ -887,23 +889,19 @@ def flatten_top_async(products, t):
     # top 2 products are indexed 0, 1
     n_keys = dict(env=dict(env=0, sys=0),
                   sys=dict(env=0, sys=0))
-    proctypes = list()
-    parent_ps = None
-    gid = None
     top_ps = dict()
     for owner in ('env', 'sys'):
         c = top_async[owner]
         p = AST.Product(c, sync=False, owner=owner)
-        keys, ps = flatten_product(
-            p, parent_ps, gid, t, proctypes)
+        keys, ps = flatten_product(p, parent_ps=None, gid=None, t=t)
         update_n_keys(n_keys, keys)
         if ps is not None:
             top_ps[owner] = ps
-    return proctypes, n_keys, top_ps
+    return n_keys, top_ps
 
 
 def flatten_product(p, parent_ps, gid,
-                    t, proctypes, lid=0, max_active=None):
+                    t, lid=0, max_active=None):
     """Flatten nested (a)synchronous products."""
     ps = None
     # `n_keys` is used to find number of keys needed
@@ -913,7 +911,13 @@ def flatten_product(p, parent_ps, gid,
     # gid = local id inside an async product
     if isinstance(p, AST.Proctype):
         g = proctype_to_graph(p, max_active)
-        proctypes.append((g, parent_ps, gid, lid))
+        # add proctype to symbol table
+        t.proctypes[g.name] = dict(
+            program_graph=g,
+            instances=dict(),
+            parent_ps=parent_ps,
+            gid=gid,
+            lid=lid)
         assume = p.assume
         owner = p.owner
         n_keys[assume][owner] = 1
@@ -927,7 +931,6 @@ def flatten_product(p, parent_ps, gid,
                     parent_ps,
                     gid,
                     t,
-                    proctypes,
                     lid=lid,
                     max_active=1)
                 for assume in ('env', 'sys'):
@@ -945,8 +948,7 @@ def flatten_product(p, parent_ps, gid,
                     x,
                     parent_ps=ps,
                     gid=j,
-                    t=t,
-                    proctypes=proctypes)
+                    t=t)
                 update_n_keys(n_keys, keys)
         # check that all processes in group are
         # either assumptions or assertions
@@ -1021,9 +1023,10 @@ def max_edge_multiplicity(g, n=None):
                for v, uv in g.succ[u].iteritems())
 
 
-def who_has_atomic(proctypes):
+def who_has_atomic(t):
     d = dict(env=0, sys=0)
-    for g, ps, gid, lid in proctypes:
+    for name, dproc in t.proctypes.iteritems():
+        g = dproc['program_graph']
         assume = g.assume
         if has_atomic(g):
             d[assume] += 1
@@ -1036,26 +1039,49 @@ def has_atomic(g):
                for u, d in g.nodes_iter(data=True))
 
 
-def add_processes(proctypes, atomic, t, global_defs):
+def add_processes(atomic, t, global_defs):
     """Instantiate processes for each proctype in `proctypes`."""
     # instantiate each proctype
-    pids = dict()
-    for g, ps, gid, lid in proctypes:
-        # above it is ensured that in sync products only 1 active
+    # a process is an instance of a proctype
+    for name, d in t.proctypes.iteritems():
+        g = d['program_graph']
+        ps = d['parent_ps']
+        gid = d['gid']
+        lid = d['lid']
         for j in xrange(g.active):
+            pid = t.add_pid(g.name, g.owner, ps, gid, lid, assume=g.assume)
+            add_variables_to_table(t, g.locals, pid, g.assume)
+            d['instances'][j] = pid
             logger.info('\t instance {j}'.format(j=j))
-            process_to_logic(ps, gid, lid, g, t, atomic, pids, global_defs)
         logger.info(
-            '-- done with proctype "{name}".\n'.format(name=g.name))
+            '-- done adding instances for '
+            'proctype "{name}".\n'.format(name=name))
+
+
+def processes_to_logic(atomic, t, global_defs):
+    """Flatten process instances in symbol table to logic formulae."""
+    pids = dict()
+    for name, d in t.proctypes.iteritems():
+        g = d['program_graph']
+        inst = d['instances']
+        for j in xrange(g.active):
+            pid = inst[j]
+            process_to_logic(pid, t, atomic, pids, global_defs)
+            logger.info('\t instance {j}'.format(j=j))
+        logger.info(
+            '-- done translating to logic '
+            'processes of type "{name}".\n'.format(name=name))
     return pids
 
 
-# a process is an instance of a proctype
-def process_to_logic(ps, gid, lid, g, t, atomic, pids, global_defs):
+def process_to_logic(pid, t, atomic, pids, global_defs):
+    """Flatten a process instance to logic formulae."""
+    proctype_name = t.pids[pid]['proctype']
+    dproc = t.proctypes[proctype_name]
+    g = dproc['program_graph']
+    ps = dproc['parent_ps']
     _, max_gid = t.products[ps]['dom']
-    pid = t.add_pid(g.name, g.owner, ps, gid, lid, assume=g.assume)
     pc = pid_to_pc(pid)
-    add_variables_to_table(t, g.locals, pid, g.assume)
     # create graph annotated with formulae
     h = nx.MultiDiGraph()
     var2edges = add_edge_formulae(h, g, t, pid)
