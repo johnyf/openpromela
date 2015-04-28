@@ -893,7 +893,27 @@ def products_to_logic(products, global_defs):
     # find the players with atomic statements
     atomic = who_has_atomic(t)
     add_processes(atomic, t, global_defs)
-    pids = processes_to_logic(atomic, t, global_defs)
+    # define "exclusive" variables for requesting atomic execution
+    for player in ('env', 'sys'):
+        if player not in top_ps:
+            continue
+        ps = top_ps[player]
+        ps_dom = t.scopes['global'][ps]['dom']
+        _, ps_max = ps_dom
+        if atomic[player]:
+            ex = 'ex_{player}'.format(player=player)
+            ex_dom = ps_dom
+            t.add_var(pid='aux', name=ex, flatname=ex,
+                      dom=ex_dom, dtype='saturating',
+                      free=True, owner=player,
+                      init=ps_max)
+            # define preemption variables for atomic execution
+            # that stops also the other player
+            pm = pm_str(player)
+            t.add_var(pid='aux', name=pm, flatname=pm,
+                      dom='boolean', dtype='boolean',
+                      free=True, owner=player,
+                      init='false')
     # add key vars to table
     # TODO: optimize key domain sizes
     max_key = 0
@@ -908,6 +928,11 @@ def products_to_logic(products, global_defs):
                 t.add_var(pid='global', name=var, flatname=var,
                           dom=dom, dtype='saturating', free=True,
                           owner=owner)
+    #
+    # symbol table not modified past this point
+    #
+    # flatten processes
+    pids = processes_to_logic(atomic, t, global_defs)
     # assemble spec
     env_imp = constrain_imperative_vars(pids, t, 'env')
     sys_imp = constrain_imperative_vars(pids, t, 'sys')
@@ -1102,9 +1127,16 @@ def add_processes(atomic, t, global_defs):
         gid = d['gid']
         lid = d['lid']
         for j in xrange(g.active):
-            pid = t.add_pid(g.name, g.owner, ps, gid, lid, assume=g.assume)
+            pid = t.add_pid(g.name, g.owner, ps,
+                            gid, lid, assume=g.assume)
             add_variables_to_table(t, g.locals, pid, g.assume)
             d['instances'][j] = pid
+            t.add_program_counter(pid, len(g), g.owner, g.root)
+            # add "next value" program counter
+            if g.assume == 'env' and g.owner == 'sys':
+                pc_next = pid_to_pc_next(pid, g.assume, g.owner)
+                t.add_program_counter(pid, len(g), g.owner,
+                                      init=None, pc=pc_next)
             logger.info('\t instance {j}'.format(j=j))
         logger.info(
             '-- done adding instances for '
@@ -1141,11 +1173,6 @@ def process_to_logic(pid, t, atomic, pids, global_defs):
     trans = graph_to_logic(h, t, pid, max_gid, atomic)
     notexe = form_notexe_condition(g, t, pid, global_defs)
     progress = collect_progress_labels(g, t, pid)
-    t.add_program_counter(pid, len(g), g.owner, g.root)
-    # add "next value" program counter
-    if g.assume == 'env' and g.owner == 'sys':
-        pc_next = pid_to_pc_next(pid, g.assume, g.owner)
-        t.add_program_counter(pid, len(g), g.owner, init=None, pc=pc_next)
     # control flow constraints
     if g.assume != g.owner:
         pcmust = graph_to_guards(g, t, pid)
@@ -1861,19 +1888,6 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
     assert ps_max >= 0, ps_max
     # assert contiguous gids
     # TODO: reimplement this assertion
-    # define "exclusive" variables for requesting atomic execution
-    if atomic[player]:
-        ex = 'ex_{player}'.format(player=player)
-        ex_dom = ps_dom
-        t.add_var(pid='aux', name=ex, flatname=ex,
-                  dom=ex_dom, dtype='saturating', free=True, owner=player,
-                  init=ps_max)
-        # define preemption variables for atomic execution
-        # that stops also the other player
-        pm = pm_str(player)
-        t.add_var(pid='aux', name=pm, flatname=pm,
-                  dom='boolean', dtype='boolean', free=True, owner=player,
-                  init='false')
     # last value means deadlock
     if ps_max > 0:
         if player == 'sys':
