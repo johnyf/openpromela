@@ -1141,11 +1141,11 @@ def process_to_logic(pid, t, atomic, pids, global_defs):
     trans = graph_to_logic(h, t, pid, max_gid, atomic)
     notexe = form_notexe_condition(g, t, pid, global_defs)
     progress = collect_progress_labels(g, t, pid)
-    t.add_program_counter(pid, len(h), g.owner, g.root)
+    t.add_program_counter(pid, len(g), g.owner, g.root)
     # add "next value" program counter
     if g.assume == 'env' and g.owner == 'sys':
         pc_next = pid_to_pc_next(pid, g.assume, g.owner)
-        t.add_program_counter(pid, len(h), g.owner, init=None, pc=pc_next)
+        t.add_program_counter(pid, len(g), g.owner, init=None, pc=pc_next)
     # control flow constraints
     if g.assume != g.owner:
         pcmust = graph_to_guards(g, t, pid)
