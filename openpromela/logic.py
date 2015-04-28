@@ -17,7 +17,6 @@ from openpromela import bitvector
 from omega.logic import past
 from openpromela import slugs
 from openpromela import _version
-from omega.logic import prime
 from omega.symbolic import symbolic as _symbolic
 from omega import gr1
 from omega.logic.syntax import conj, disj
@@ -1394,8 +1393,6 @@ def form_notexe_condition(g, t, pid, global_defs, aut):
 def graph_to_guards(g, t, pid, aut):
     """Require that the selected edge be executable."""
     assert g.owner != g.assume, (g.owner, g.assume)
-    flatvars = t.flatten()
-    varmap = {var: '(X {var})'.format(var=var) for var in flatvars}
     aux = pid_to_key(t, pid)
     pc = pid_to_pc(pid)
     pc_next = pid_to_pc_next(pid, g.assume, g.owner)
@@ -1415,7 +1412,7 @@ def graph_to_guards(g, t, pid, aut):
             e = stmt.to_guard(t, pid, g.assume)
             # assume sys ? -> primed the guard
             if g.assume == 'env' and g.owner == 'sys':
-                e = prime.prime_expr(e, varmap)
+                e = '(X ({guard}))'.format(guard=e)
             guards.append(e)
             r.append((
                 '(X ({pc_next} = {v})) & '
