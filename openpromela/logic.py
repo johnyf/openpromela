@@ -8,6 +8,7 @@ import logging
 import pprint
 import textwrap
 import warnings
+from dd import bdd as _bdd
 import networkx as nx
 from networkx.utils import misc
 from promela import ast
@@ -1373,9 +1374,10 @@ def form_notexe_condition(g, t, pid, global_defs, aut):
             c = d.get('stmt')
             assert isinstance(c, (AST.Assignment,
                                   AST.Expression, AST.Else))
-            e = c.to_guard(t, pid, g.assume)
-            r.append(e)
-            if e == 'True':
+            e, _ = c.to_logic(t, pid, assume=g.assume)
+            guard = _expr_to_guard(e, aut, g.assume)
+            r.append(guard)
+            if guard == 'True':
                 break
         # if executed, is it atomic transition ?
         if du['context'] == 'atomic':
@@ -1409,17 +1411,18 @@ def graph_to_guards(g, t, pid, aut):
         r = list()
         for _, v, key, d in g.edges_iter(u, keys=True, data=True):
             stmt = d['stmt']
-            e = stmt.to_guard(t, pid, g.assume)
-            # assume sys ? -> primed the guard
+            e, _ = stmt.to_logic(t, pid, assume=g.assume)
+            guard = _expr_to_guard(e, aut, player=g.assume)
+            # assume sys ? -> prime the guard
             if g.assume == 'env' and g.owner == 'sys':
-                e = '(X ({guard}))'.format(guard=e)
-            guards.append(e)
+                guard = '(X ({guard}))'.format(guard=guard)
+            guards.append(guard)
             r.append((
                 '(X ({pc_next} = {v})) & '
                 '(X ({aux} = {key})) & '
                 '({guard})').format(
                     pc_next=pc_next, aux=aux,
-                    v=v, key=key, guard=e))
+                    v=v, key=key, guard=guard))
         trans = disj(r)
         # selected out-edge must be unblocked
         post = '( ((X {aux}) < {n}) & ({trans}) )'.format(
@@ -1448,19 +1451,38 @@ def initialize_pc_next(g, t, pid, aut):
     for u, v, key, d in g.edges_iter(root, keys=True, data=True):
         assert u == root, (u, root)
         stmt = d['stmt']
-        e = stmt.to_guard(t, pid, g.assume)
-        guards.append(e)
+        e, _ = stmt.to_logic(t, pid, assume=g.assume)
+        guard = _expr_to_guard(e, aut, player=g.assume)
+        guards.append(guard)
         r.append((
             '(({pc_next} = {v}) & '
             '({aux} = {key}) & '
             '({guard}))').format(
                 pc_next=pc_next, aux=aux,
-                v=v, key=key, guard=e))
+                v=v, key=key, guard=guard))
     # sys doesn't lose if "assume sys" root has no out-edges
     unblocked = disj(guards)
     trans = disj(r)
     return '(({unblocked}) -> ({trans}))'.format(
         unblocked=unblocked, trans=trans)
+
+
+def _expr_to_guard(e, aut, player):
+    """Return expression after quantifying primed `player` vars."""
+    assert player in ('env', 'sys'), player
+    if player == 'env':
+        qvars = aut.upvars
+    elif player == 'sys':
+        qvars = aut.epvars
+    rename = aut.prime
+    bdd = aut.bdd
+    u = aut.add_expr(e)
+    (v,) = aut.action[player]  # integer range limits
+    u = _bdd.preimage(u, v, rename, qvars, bdd, forall=False)
+    if u == -1:
+        print('Warning: guard "{e}" evaluates to "False".'.format(e=e))
+    r = bdd.to_expr(u)
+    return r
 
 
 def transform_ltl_blocks(ltl, t):
