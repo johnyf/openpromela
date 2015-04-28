@@ -35,7 +35,18 @@ def bitblast(f, t):
 
 
 def bitblast_table(table):
-    """Return table of variables for bitvectors."""
+    """Return table of variables for bitvectors.
+
+    `table` is a `dict` that maps each variable
+    to a `dict` with attributes:
+
+      - "type": `in ('boolean', 'bool',
+                     'saturating', 'modwrap', 'int')`
+      - "owner": `in ('env', 'sys')`
+      - "dom": `tuple([min, max])` where `min, max` are `int`
+        used only if "type" is an integer
+      - "init" (optional)
+    """
     t = dict()
     init = {'env': list(), 'sys': list()}
     safety = {'env': list(), 'sys': list()}
