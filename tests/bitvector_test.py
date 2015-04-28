@@ -223,7 +223,7 @@ def test_ite():
     t = {'x': {'type': 'bool'},
          'y': {'type': 'bool'},
          'z': {'type': 'bool'}}
-    p = parser.parse('(ite x, y, z)')
+    p = parser.parse('ite( x, y, z)')
     s = p.flatten(t=t)
     assert s == r, s
     with nt.assert_raises(AssertionError):

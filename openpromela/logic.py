@@ -446,7 +446,7 @@ class AST(object):
                 s = flatnames[0]
                 for i in xrange(1, d['length']):
                     element = flatnames[i]
-                    s = '(ite {expr} = {i}, {element}, {s})'.format(
+                    s = 'ite( {expr} = {i}, {element}, {s})'.format(
                         expr=e,
                         i=i,
                         element=element,
@@ -1839,7 +1839,7 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
         if assume == 'env' and pc_owner == 'sys':
             safety[pc_owner].append((
                 '\n# program counter variables:\n'
-                '(ite (X ({ps} = {gid})), '
+                'ite( (X ({ps} = {gid})), '
                 '(X {pc} = {pc_next}), ({invariant}))').format(
                     ps=ps, gid=gid, pc=pc, pc_next=pc_next,
                     invariant=_invariant(pc, pc_dom)))
@@ -2084,7 +2084,7 @@ def compile_spec(code, strict_atomic=True):
         freeze_globals = constrain_global_declarative_vars(
             vartable, global_defs, 'env')
         env_ltl_safe = (
-            '(ite (pm_sys & ((X {ps}) = ex_sys) &'
+            'ite( (pm_sys & ((X {ps}) = ex_sys) &'
             ' (ex_sys < {max_gid})), {freeze_globals}, {safe})').format(
                 max_gid=max_gid,
                 safe=env_ltl_safe,

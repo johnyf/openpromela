@@ -649,7 +649,7 @@ def test_array():
     f = ltl.formula
     s, context = f.to_logic(t, pid='global')
     assert context == 'boolean', context
-    correct = '((ite {y} = 2, {x}2, (ite {y} = 1, {x}1, {x}0)) = 0)'.format(
+    correct = '(ite( {y} = 2, {x}2, ite( {y} = 1, {x}1, {x}0)) = 0)'.format(
         x='pidglobal_x', y='pidglobal_y')
     assert s == correct, s
     s, pr = f.to_guard(
@@ -681,7 +681,7 @@ def test_array():
     f = ltl.formula
     s, context = f.to_logic(t, pid='global')
     correct = (
-        '((ite (X {y}) = 2, {x}2, (ite (X {y}) = 1, {x}1, {x}0)) = 0)').format(
+        '(ite( (X {y}) = 2, {x}2, ite( (X {y}) = 1, {x}1, {x}0)) = 0)').format(
             x='pidglobal_x', y='pidglobal_y')
     assert s == correct, s
     f.to_guard(t, pid='global', assume='sys', primed=True, negated=True)
