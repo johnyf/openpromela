@@ -256,11 +256,11 @@ def test_ite():
 def test_init_to_logic():
     # bool
     d = dict(type='boolean', init='False')
-    c = bv.init_to_logic('x', d)
+    c = bv._init_to_logic('x', d)
     assert c == 'x <-> False', c
     # number
     d = dict(type='other', init=5)
-    c = bv.init_to_logic('y', d)
+    c = bv._init_to_logic('y', d)
     assert c == 'y = 5', c
     # TODO: create equivalent test
     # array

@@ -62,7 +62,7 @@ def bitblast_table(table):
         # imperative var or free var assigned at decl ?
         ival = d.get('init')
         if ival is not None:
-            c = init_to_logic(var, d)
+            c = _init_to_logic(var, d)
             init[owner].append(c)
         # ranged bitfield safety constraints
         if dtype == 'boolean':
@@ -75,13 +75,13 @@ def bitblast_table(table):
         safety[owner].append(
             '({min} <= {x}) & ({x} <= {max})'.format(
                 min=dmin, max=dmax, x=var))
-    check_data_types(t)
-    add_bitnames(t)
+    _check_data_types(t)
+    _add_bitnames(t)
     logger.info('-- done bitblasting vars table\n')
     return t, init, safety
 
 
-def init_to_logic(var, d):
+def _init_to_logic(var, d):
     """Return logic formulae for initial condition."""
     if d['type'] == 'boolean':
         op = '<->'
@@ -113,7 +113,7 @@ def dom_to_width(dom):
     return signed, width
 
 
-def add_bitnames(t):
+def _add_bitnames(t):
     # str_to_int not needed, because there
     # are no string variables in Promela
     for var, d in t.iteritems():
@@ -122,7 +122,7 @@ def add_bitnames(t):
                              for i in xrange(d['width'])]
 
 
-def check_data_types(t):
+def _check_data_types(t):
     types = {'bool', 'int'}
     for var, d in t.iteritems():
         if d['type'] in types:
@@ -299,7 +299,7 @@ class Nodes(_Nodes):
             # not arithmetic scope ?
             if mem is None:
                 # must be Boolean variable
-                assert_var_in_table(name, t)
+                _assert_var_in_table(name, t)
                 v = t[name]
                 assert v['type'] == 'bool', v['type']
                 return '{v}{prime}'.format(
@@ -655,7 +655,7 @@ def var_to_twos_complement(p, t):
     # little-endian encoding
     logger.info(
         '++ encode variable "{p}" to 2s complement'.format(p=p))
-    assert_var_in_table(p, t)
+    _assert_var_in_table(p, t)
     v = t[p]
     # arithmetic operators defined only for integers
     if v['type'] == 'bool':
@@ -681,7 +681,7 @@ def var_to_twos_complement(p, t):
     return bits
 
 
-def assert_var_in_table(name, t):
+def _assert_var_in_table(name, t):
     """Raise `Exception` if variable `name` not in table `t`."""
     # not in variables table ?
     if name in t:
