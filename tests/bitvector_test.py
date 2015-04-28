@@ -297,6 +297,19 @@ def test_bool_eq_number():
     assert r == ' ! ^ x 0 ', r
 
 
+def test_mixed_fol_bitblasted():
+    t = dict(x=dict(type='bool', owner='sys'),
+             y=dict(type='int', dom=(0, 3), owner='sys'))
+    t, _, _ = bv.bitblast_table(t)
+    s = '(x & y_0) | (y < 0)'
+    tree_0 = parser.parse(s)
+    q = 'y < 0'
+    tree_1 = parser.parse(q)
+    f0 = tree_0.flatten(t=t)
+    f1 = tree_1.flatten(t=t)
+    assert f0 == ' |  & x y_0  {f1} '.format(f1=f1), (f0, f1)
+
+
 def test_prefix_parser():
     parser = openpromela.bdd.Parser()
     nodes = parser.nodes

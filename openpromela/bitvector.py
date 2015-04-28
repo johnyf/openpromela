@@ -311,12 +311,10 @@ class Nodes(_Nodes):
         def flatten(self, prime=None, mem=None, t=None, *arg, **kw):
             logger.info('flatten "{s}"'.format(s=repr(self)))
             name = self.value
-            # not arithmetic scope ?
-            if mem is None:
-                # must be Boolean variable
-                _assert_var_in_table(name, t)
-                v = t[name]
-                assert v['type'] == 'bool', v['type']
+            if _is_bool_var(name, t):
+                # Boolean scope ?
+                if name in t:
+                    assert mem is None
                 return '{v}{prime}'.format(
                     v=name, prime="'" if prime else '')
             # arithmetic context
@@ -694,6 +692,22 @@ def var_to_twos_complement(p, t):
         p=p, bits=bits))
     logger.info('-- done encoding variable "{p}".\n'.format(p=p))
     return bits
+
+
+def _is_bool_var(name, t):
+    # fol var ?
+    if name in t:
+        d = t[name]
+        return (d['type'] == 'bool')
+    else:
+        # bit in a bitvector ?
+        int_var = name.rsplit('_', 1)[0]
+        is_bit = (
+            int_var in t and
+            name in t[int_var]['bitnames'])
+        if is_bit:
+            return True
+    _assert_var_in_table(name, t)
 
 
 def _assert_var_in_table(name, t):
