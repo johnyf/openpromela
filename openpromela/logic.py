@@ -665,10 +665,12 @@ _parser = Parser()
 class Table(object):
     """Table of variables for synthesis.
 
-    Distinguishes between:
+    Attributes of symbol table:
 
-      - controllable and uncontrollable variables
-      - free and idle variables
+      - scopes: one for each pid, a global, and an auxiliary one
+      - pids: process ids
+      - products: asynchronous products (universally quantified)
+      - proctypes
 
     Attributes of each variable:
 
@@ -679,7 +681,7 @@ class Table(object):
 
     Attributes for each process:
 
-      - proctype
+      - proctype: name of proctype
         `str`
       - owner: of program counter
         in `{'env', 'sys'}`
@@ -704,6 +706,14 @@ class Table(object):
       - parent_ps: name of product containing this one
         `str` or `None`
       - gid: group id of this product inside `parent_ps`
+
+    Attributes of each proctype:
+
+      - program_graph
+      - gid: group id
+      - lid: local id inside a sync product
+      - instances: `dict` that maps the order of instantiation to pids
+      - parent_ps: var of async product that contains this proctype
     """
 
     def __init__(self):
@@ -711,6 +721,7 @@ class Table(object):
         self.scopes = {'aux': dict(), 'global': dict()}
         self.pids = dict()
         self.products = dict()
+        self.proctypes = dict()
         # struct data types not supported yet
 
     def __str__(self):
@@ -719,10 +730,12 @@ class Table(object):
             '--------------------\n\n'
             '{scopes}\n\n'
             '{pids}\n\n'
-            '{products}\n\n').format(
+            '{products}\n\n'
+            '{proctypes}\n\n').format(
                 scopes=pprint.pformat(self.scopes),
                 pids=pprint.pformat(self.pids),
-                products=pprint.pformat(self.products))
+                products=pprint.pformat(self.products),
+                proctypes=pprint.pformat(self.proctypes))
 
     def variables_iter(self):
         """Return generator over tuples `(pid, var, dict)`."""
