@@ -1145,13 +1145,19 @@ def add_processes(atomic, t, global_defs):
 
 def processes_to_logic(atomic, t, global_defs):
     """Flatten process instances in symbol table to logic formulae."""
+    # init BDD manager and parser
+    flat_table = t.flatten()
+    aut = _symbolic.Automaton()
+    aut.vars = flat_table
+    aut = aut.build()
+    # flatten
     pids = dict()
     for name, d in t.proctypes.iteritems():
         g = d['program_graph']
         inst = d['instances']
         for j in xrange(g.active):
             pid = inst[j]
-            process_to_logic(pid, t, atomic, pids, global_defs)
+            process_to_logic(pid, t, atomic, pids, global_defs, aut)
             logger.info('\t instance {j}'.format(j=j))
         logger.info(
             '-- done translating to logic '
@@ -1159,7 +1165,7 @@ def processes_to_logic(atomic, t, global_defs):
     return pids
 
 
-def process_to_logic(pid, t, atomic, pids, global_defs):
+def process_to_logic(pid, t, atomic, pids, global_defs, aut):
     """Flatten a process instance to logic formulae."""
     proctype_name = t.pids[pid]['proctype']
     dproc = t.proctypes[proctype_name]
@@ -1171,12 +1177,12 @@ def process_to_logic(pid, t, atomic, pids, global_defs):
     h = nx.MultiDiGraph()
     var2edges = add_edge_formulae(h, g, t, pid)
     trans = graph_to_logic(h, t, pid, max_gid, atomic)
-    notexe = form_notexe_condition(g, t, pid, global_defs)
+    notexe = form_notexe_condition(g, t, pid, global_defs, aut)
     progress = collect_progress_labels(g, t, pid)
     # control flow constraints
     if g.assume != g.owner:
-        pcmust = graph_to_guards(g, t, pid)
-        pc_next_init = initialize_pc_next(g, t, pid)
+        pcmust = graph_to_guards(g, t, pid, aut)
+        pc_next_init = initialize_pc_next(g, t, pid, aut)
     else:
         pcmust = None
         pc_next_init = None
@@ -1352,7 +1358,7 @@ def form_exclusive_expr(context, assume, gid, max_gid):
     return exclusive
 
 
-def form_notexe_condition(g, t, pid, global_defs):
+def form_notexe_condition(g, t, pid, global_defs, aut):
     """Return map from nodes to blocking conditions.
 
     @return: Map from nodes to Boolean formulae.
@@ -1385,7 +1391,7 @@ def form_notexe_condition(g, t, pid, global_defs):
         for u, (b, freeze) in _disj.iteritems())
 
 
-def graph_to_guards(g, t, pid):
+def graph_to_guards(g, t, pid, aut):
     """Require that the selected edge be executable."""
     assert g.owner != g.assume, (g.owner, g.assume)
     flatvars = t.flatten()
@@ -1436,7 +1442,7 @@ def graph_to_guards(g, t, pid):
     return conj(c)
 
 
-def initialize_pc_next(g, t, pid):
+def initialize_pc_next(g, t, pid, aut):
     root = g.root
     pc_next = pid_to_pc_next(pid, g.assume, g.owner)
     aux = pid_to_key(t, pid)
