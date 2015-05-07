@@ -445,6 +445,8 @@ def flatten_arithmetic(operator, p, q, mem):
         '++ flatten arithmetic operator "{op}"'.format(op=operator))
     assert isinstance(p, list)
     assert isinstance(q, list)
+    assert isinstance(mem, list)
+    start = len(mem)
     if operator in {'+', '-'}:
         add = (operator == '+')
         result, res_mem, _ = adder_subtractor(
@@ -466,11 +468,12 @@ def flatten_arithmetic(operator, p, q, mem):
 def multiplier(x, y, s=None, start=0):
     """Return the unsigned product of `x` and `y`."""
     # caution: this is unsigned
-    assert len(x) == len(y)
-    assert start >= 0
+    assert start >= 0, start
+    assert len(x) == len(y), (x, y)
+    n = len(y)
     if s is None:
-        s = len(y) - 1
-    assert -1 <= s < len(x)
+        s = n - 1
+    assert -1 <= s < n, (s, n)
     # base stage: -1
     if s == -1:
         mem = list()
@@ -482,7 +485,7 @@ def multiplier(x, y, s=None, start=0):
     res, sum_mem, carry = adder_subtractor(
         mul_res, z, add=True, start=len(mem) + start)
     mem.extend(sum_mem)
-    assert len(res) == len(x)
+    assert len(res) == len(x), (x, res, mem)
     return res, mem
 
 
@@ -497,23 +500,24 @@ def adder_subtractor(x, y, add=True, start=0):
     https://en.wikipedia.org/wiki/Adder%E2%80%93subtractor
     https://en.wikipedia.org/wiki/Adder_%28electronics%29
 
-    @param x: two's complement representation
-    @type x: `list` of bits
-    @param y: two's complement representation
-    @type y: `list` of bits
+    @param x, y: summands (in two's complement)
+    @type x, y: `list` of bits
     @param add: if `True` then add, otherwise subtract
     @type add: `bool`
     @param start: insert first element at
         this index in memory structure
     @type start: `int` >= 0
+
+    @return: (result, memory, carry)
+    @type: `tuple(list, list, str)`
     """
-    assert start >= 0
-    assert isinstance(x, list)
-    assert isinstance(y, list)
+    assert start >= 0, start
+    assert isinstance(x, list), x
+    assert isinstance(y, list), y
     dowhat = 'add' if add else 'subtract'
     logger.info('++ {what}...'.format(what=dowhat))
     p, q = equalize_width(x, y, extend_by=1)
-    assert len(p) == len(q)
+    assert len(p) == len(q), (p, q)
     logger.debug('p = {p}\nq = {q}'.format(p=p, q=q))
     # invert
     if add:
@@ -787,7 +791,7 @@ def sign_extension(x, n):
     logger.debug(
         '++ sign extension to {n} bits of: {x}'.format(x=x, n=n))
     assert isinstance(x, list)
-    assert n < 32
+    assert n < 32, n
     m = len(x)
     if m < 2:
         raise ValueError('"{x}" has less than 2 bits.'.format(x=x))
