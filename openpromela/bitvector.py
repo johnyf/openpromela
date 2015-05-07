@@ -281,7 +281,9 @@ class Nodes(_Nodes):
             if mem is None:
                 return ite_connective(x, y, z)
             else:
-                return ite_function(x, y, z, mem=mem)
+                r, ite_mem = ite_function(x, y, z, start=len(mem))
+                mem.extend(ite_mem)
+                return r
 
     class Unary(_Nodes.Unary):
         def flatten(self, *arg, **kw):
@@ -616,15 +618,13 @@ def truncate(x, n):
     return x[:n]
 
 
-def ite_function(a, b, c, mem):
+def ite_function(a, b, c, start):
     """Return memory buffer elements for ite between integers.
 
     @param a: propositinal formula
     @type a: `str`
-
     @param b, c: arithmetic formula
     @type b, c: `list`
-
     @param start: continue indexing buffer cells from this value
     @type start: `int`
 
@@ -634,15 +634,13 @@ def ite_function(a, b, c, mem):
     assert isinstance(b, list)
     assert isinstance(c, list)
     assert len(b) == len(c)
-    start = len(mem)
     m = list()
     m.append(a)
     for p, q in zip(b, c):
         s = '| & {p} ? {i} & {q} ! ? {i}'.format(p=p, q=q, i=start)
         m.append(s)
-    mem.extend(m)
     r = ['? {i}'.format(i=i + start + 1) for i, _ in enumerate(b)]
-    return r
+    return r, m
 
 
 def ite_connective(a, b, c):

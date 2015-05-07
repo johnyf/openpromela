@@ -232,8 +232,7 @@ def test_ite():
     x = 'x'
     y = ['y0', 'y1']
     z = ['z0', 'z1']
-    mem = list()
-    r = bv.ite_function(x, y, z, mem)
+    r, mem = bv.ite_function(x, y, z, start=0)
     correct = [
         'x',
         '| & y0 ? 0 & z0 ! ? 0',
@@ -241,7 +240,8 @@ def test_ite():
     assert mem == correct, mem
     assert r == ['? 1', '? 2']
     # flip
-    r = bv.ite_function(x, z, y, mem)
+    r, more_mem = bv.ite_function(x, z, y, start=len(mem))
+    mem.extend(more_mem)
     correct.extend([
         'x',
         '| & z0 ? 3 & y0 ! ? 3',
@@ -263,8 +263,9 @@ def test_ite():
         '| & a0 ? 0 & b0 ! ? 0',
         '| & a1 ? 0 & b1 ! ? 0']
     assert r == ['? 1', '? 2']
+    # b, c of different length
     with nt.assert_raises(AssertionError):
-        bv.ite_function('x', ['y0'], ['z0', 'z1', 'z2'], list())
+        bv.ite_function('x', ['y0'], ['z0', 'z1', 'z2'], start=0)
 
 
 def test_init_to_logic():
