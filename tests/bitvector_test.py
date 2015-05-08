@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import logging
+from dd import bdd as _bdd
 import networkx as nx
-from openpromela import bitvector as bv
 import openpromela.bdd
+from openpromela import bitvector as bv
 from nose import tools as nt
 
 
@@ -104,6 +105,71 @@ def test_flatten_arithmetic():
                    '^ ^ a1 0 ? 3',
                    '| & a1 0 & ^ a1 0 ? 3'], mem
     # TODO: subtraction
+
+
+def test_multiplier():
+    # LSB ... MSB
+    # 0 * 0 = 0
+    x = ['0', '0']
+    y = list(x)
+    res, mem = bv.multiplier(x, y, start=0)
+    r = _evaluate_result(res, mem)
+    assert r == 0, r
+    # 1 * 0 = 0
+    x = ['0', '0']
+    y = ['1', '0']
+    res, mem = bv.multiplier(x, y, start=0)
+    r = _evaluate_result(res, mem)
+    assert r == 0, r
+    # -1 * 1 = -1
+    x = ['1', '1']
+    y = ['1', '0']
+    res, mem = bv.multiplier(x, y, start=0)
+    r = _evaluate_result(res, mem)
+    # 1 * -1 = -1
+    x = ['1', '0']
+    y = ['1', '1']
+    res, mem = bv.multiplier(x, y, start=0)
+    r = _evaluate_result(res, mem)
+    assert r == -1, r
+    # -2 * 2 = -4
+    x = ['0', '1', '1']
+    y = ['0', '1', '0']
+    res, mem = bv.multiplier(x, y, start=0)
+    r = _evaluate_result(res, mem)
+    assert r == -4, r
+    # 8 * 8 = 64
+    x = ['0', '0', '0', '1', '0']
+    y = list(x)
+    res, mem = bv.multiplier(x, y, start=0)
+    r = _evaluate_result(res, mem)
+    assert r == 64, r
+    # -16 * 5 = -80
+    x = ['0', '0', '0', '0', '1', '1']
+    y = ['1', '0', '1', '0']
+    res, mem = bv.multiplier(x, y, start=0)
+    r = _evaluate_result(res, mem)
+    assert r == -80, r
+
+
+def _evaluate_result(result, memory):
+    """Return integer, given a result and memory w/o variables.
+
+    @type result: `list`
+    @type memory: `list`
+    """
+    bdd = _bdd.BDD({'x': 0})
+    n = len(memory) + 1
+    mem = ' '.join(memory)
+    bits = list()
+    for bit in result:
+        s = '$ {n} {mem} {bit}'.format(n=n, mem=mem, bit=bit)
+        u = openpromela.bdd.add_expr(s, bdd)
+        bits.append(u)
+    bits = [b == 1 for b in bits]
+    # print([int(b) for b in bits])
+    j = bv.twos_complement_to_int(bits)
+    return j
 
 
 def test_fixed_shift():

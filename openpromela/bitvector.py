@@ -465,9 +465,42 @@ def flatten_arithmetic(operator, p, q, mem):
     return result
 
 
-def multiplier(x, y, s=None, start=0):
-    """Return the unsigned product of `x` and `y`."""
-    # caution: this is unsigned
+def multiplier(x, y, start=0):
+    """Return the signed product of `x` and `y`.
+
+    @param x, y: multiplicands
+    @type x, y: `list`
+
+    @return: (result, memory)
+    @rtype: `tuple(list, list)`
+    """
+    assert isinstance(x, list), x
+    assert isinstance(y, list), y
+    nx = len(x)
+    ny = len(y)
+    n = nx + ny
+    p, q = equalize_width(x, y, extend_by=min(nx, ny))
+    res, mem = _multiplier(p, q, s=None, start=start)
+    assert len(res) == n, (len(res), n)
+    if n > 32:
+        print('WARNING: (openpromela.bitvector) '
+              'Truncating multiplication to 32 bits.')
+        res = truncate(res, 32)
+    return res, mem
+
+
+def _multiplier(x, y, s=None, start=0):
+    """Return stage `s` of multiplier.
+
+    @param x, y: multiplicands (in two's complement)
+    @param s: desired stage of multiplier
+    @type s: `int` with: `-1 <= s < len(y)`
+    @param start: memory address to start indexing from
+    @type start: `int` >= 0
+
+    @return: (result, memory)
+    @rtype: `tuple(list, list)`
+    """
     assert start >= 0, start
     assert len(x) == len(y), (x, y)
     n = len(y)
@@ -477,14 +510,18 @@ def multiplier(x, y, s=None, start=0):
     # base stage: -1
     if s == -1:
         mem = list()
-        return y, mem
+        return ['0'] * len(x), mem
     # stages: 0 ... n - 1
-    shifted_x = fixed_shift(x, s)
+    # recurse
+    j = start
+    mul_res, mem = _multiplier(x, y, s=s - 1, start=j)
+    j += len(mem)
+    # this stage
+    shifted_x = fixed_shift(x, s, left=True)
     z = ['& {a} {b}'.format(a=a, b=y[s]) for a in shifted_x]
-    mul_res, mem = multiplier(x, y, s=s - 1, start=start)
     res, sum_mem, carry = adder_subtractor(
-        mul_res, z, add=True, start=len(mem) + start)
-    mem.extend(sum_mem)
+        mul_res, z, add=True, start=j, extend_by=0)
+    j = _extend_memory(mem, sum_mem, j)
     assert len(res) == len(x), (x, res, mem)
     return res, mem
 
