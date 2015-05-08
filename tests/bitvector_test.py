@@ -107,6 +107,63 @@ def test_flatten_arithmetic():
     # TODO: subtraction
 
 
+def test_division():
+    # 1 / 1 = 1 * 1 + 0
+    x = ['1', '0']
+    y = ['1', '0']
+    _divide(x, y, q=1, r=0)
+    # -2 / 1 = -2 * 1 + 0
+    x = ['0', '1']
+    y = ['1', '0']
+    _divide(x, y, q=-2, r=0)
+    # 0 / 1 == 0 * 1 + 0
+    x = ['0', '0']
+    y = ['1', '0']
+    _divide(x, y, q=0, r=0)
+    # 2 / -2 = -1 * (-2) + 0
+    x = ['0', '1', '0']
+    y = ['0', '1', '1']
+    _divide(x, y, q=-1, r=0)
+    #
+    # negative numbers
+    # -4 / 2 = -2 * 2 + 0
+    x = ['0', '0', '1']
+    y = ['0', '1', '0']
+    _divide(x, y, q=-2, r=0)
+    # 4 / -2 = -2 * (-2) + 0
+    x = ['0', '0', '1', '0']
+    y = ['0', '1']
+    _divide(x, y, q=-2, r=0)
+    #
+    # C99 semantics
+    # 4 / -3 = -1 * (-3) + 1
+    x = ['0', '0', '1', '0']
+    y = ['1', '0', '1']
+    _divide(x, y, q=-1, r=1)
+    # -4 / 3 = -1 * 3 - 1
+    x = ['0', '0', '1', '1']
+    y = ['1', '1', '0']
+    _divide(x, y, q=-1, r=-1)
+    #
+    # divisor > dividend
+    # 4 / 5 = 0 * 5 + 4
+    x = ['0', '0', '1', '0']
+    y = ['1', '0', '1', '0']
+    _divide(x, y, q=0, r=4)
+    # -4 / -5 = 0 * (-5) -4
+    x = ['0', '0', '1', '1']
+    y = ['1', '1', '0', '1']
+    _divide(x, y, q=0, r=-4)
+
+
+def _divide(x, y, q, r):
+    quo, rem, mem = bv.restoring_divider(x, y)
+    q_ = _evaluate_result(quo, mem)
+    r_ = _evaluate_result(rem, mem)
+    assert q_ == q, (q_, r_)
+    assert r_ == r, (q_, r_)
+
+
 def test_multiplier():
     # LSB ... MSB
     # 0 * 0 = 0

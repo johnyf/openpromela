@@ -465,6 +465,97 @@ def flatten_arithmetic(operator, p, q, mem):
     return result
 
 
+def restoring_divider(x, y, start=0):
+    """Return divider for bitvectors `x`, `y`.
+
+    @param x: dividend
+    @param y: divisor
+    @type x, y: `list`
+    @param start: memory address to start indexing from
+    @type start: `int` >= 0
+
+    @return: (quotient, remainder, memory)
+    @rtype: `tuple(list, list, list)`
+    """
+    # TODO: propagate to propositional context
+    # constraint that detects zero divisor
+    assert start >= 0, start
+    assert isinstance(x, list), x
+    assert isinstance(y, list), y
+    mem = list()
+    j = start
+    # rectify
+    a, a_mem = abs_(x, j)
+    j = _extend_memory(mem, a_mem, j)
+    b, b_mem = abs_(y, j)
+    j = _extend_memory(mem, b_mem, j)
+    # divide
+    quo, rem, div_mem = _restoring_divider(a, b, start=j)
+    j = _extend_memory(mem, div_mem, j)
+    # fix signs
+    x_sign = sign(x)
+    y_sign = sign(y)
+    opposite_signs = '^ {x} {y}'.format(x=x_sign, y=y_sign)
+    quo, neg_mem = _negate_if(opposite_signs, quo, start=j)
+    j = _extend_memory(mem, neg_mem, j)
+    rem, neg_mem = _negate_if(x_sign, rem, start=j)
+    j = _extend_memory(mem, neg_mem, j)
+    return quo, rem, mem
+
+
+def _restoring_divider(x, y, s=None, start=0):
+    """Return stage `s` of divider (positive).
+
+    @param x: dividend
+    @param y: divider
+    @type x, y: positive numbers in two's complement
+        `list`
+    @param s: desired stage of divider
+    @type s: `int` with: `-1 <= s <= len(x)`
+    @param start: memory address to start indexing from
+    @type start: `int` >= 0
+    """
+    assert start >= 0, start
+    assert isinstance(x, list), x
+    assert isinstance(y, list), y
+    n = len(x)
+    # init
+    if s is None:
+        # double widths
+        y = pad(y, 2 * n)
+        y = fixed_shift(y, n, left=True)
+        s = n - 1
+    assert -1 <= s < n, (s, n)
+    mem = list()
+    j = start
+    # base stage: -1
+    if s == -1:
+        quo = list()
+        rem = pad(x, 2 * n)
+        return quo, rem, mem
+    # stages: 0 ... n - 1
+    # recurse
+    quo, p, div_mem = _restoring_divider(x, y, s - 1, start=j)
+    j = _extend_memory(mem, div_mem, j)
+    # this stage
+    # diff
+    shifted_p = fixed_shift(p, 1, left=True)
+    r, sum_mem, carry = adder_subtractor(shifted_p, y, add=False,
+                                         start=j, extend_by=0)
+    j = _extend_memory(mem, sum_mem, j)
+    # quotient
+    sgn = sign(r)
+    q = '! {sgn}'.format(sgn=sgn)
+    quo.insert(0, q)
+    # partial remainder
+    rem, ite_mem = ite_function(q, r, shifted_p, start=j)
+    j = _extend_memory(mem, ite_mem, j)
+    # top stage ?
+    if s == n - 1:
+        rem = rem[n:]
+    return quo, rem, mem
+
+
 def multiplier(x, y, start=0):
     """Return the signed product of `x` and `y`.
 
