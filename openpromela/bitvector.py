@@ -489,7 +489,7 @@ def multiplier(x, y, s=None, start=0):
     return res, mem
 
 
-def adder_subtractor(x, y, add=True, start=0):
+def adder_subtractor(x, y, add=True, start=0, extend_by=1):
     """Return sum of `p` and `q`, w/o truncation.
 
     Implements a ripple-carry adder-subtractor.
@@ -507,16 +507,19 @@ def adder_subtractor(x, y, add=True, start=0):
     @param start: insert first element at
         this index in memory structure
     @type start: `int` >= 0
+    @param extend_by: extra sign-extension by so many bits
+    @type extend_by: `int` >= 0
 
     @return: (result, memory, carry)
     @type: `tuple(list, list, str)`
     """
     assert start >= 0, start
+    assert extend_by >= 0, extend_by
     assert isinstance(x, list), x
     assert isinstance(y, list), y
     dowhat = 'add' if add else 'subtract'
     logger.info('++ {what}...'.format(what=dowhat))
-    p, q = equalize_width(x, y, extend_by=1)
+    p, q = equalize_width(x, y, extend_by=extend_by)
     assert len(p) == len(q), (p, q)
     logger.debug('p = {p}\nq = {q}'.format(p=p, q=q))
     # invert
