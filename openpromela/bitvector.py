@@ -449,18 +449,17 @@ def flatten_arithmetic(operator, p, q, mem):
     start = len(mem)
     if operator in {'+', '-'}:
         add = (operator == '+')
-        result, res_mem, _ = adder_subtractor(
-            p, q, add, start=len(mem))
-        mem.extend(res_mem)
-    elif operator in {'*', '/', '%'}:
-        raise NotImplementedError(
-            'multiplication, division, '
-            'modulo are not implemened yet.'
-            ' In any case, BDDs are inefficient for '
-            'representing them.')
+        result, res_mem, _ = adder_subtractor(p, q, add, start)
+    elif operator == '*':
+        res, res_mem = multiplier(p, q, start)
+    elif operator == '/':
+        res, _, res_mem = restoring_divider(p, q, start)
+    elif operator == '%':
+        _, res, res_mem = restoring_divider(p, q, start)
     else:
         raise ValueError(
             'Unknown arithmetic operator "{op}"'.format(op=operator))
+    mem.extend(res_mem)
     logger.info('-- done flattening "{op}"\n'.format(op=operator))
     return result
 
