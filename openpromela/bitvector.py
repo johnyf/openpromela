@@ -775,6 +775,35 @@ def twos_complement_to_int(bits):
     return -r[-1] * 2**n + sum(b * 2**i for i, b in enumerate(r[:-1]))
 
 
+def abs_(x, start=0):
+    """Return absolute value of `x`.
+
+    @param start: memory address to start indexing from
+    @type start: `int` >= 0
+    """
+    return _negate_if(sign(x), x, start)
+
+
+def _negate_if(guard, x, start=0):
+    """Return conditional negation of `x`.
+
+    @param guard: if `True`, then negate
+    @type guard: `str`
+    """
+    assert isinstance(x, list), x
+    assert start >= 0, start
+    n = len(x)
+    zero = pad(['0'], len(x))
+    j = start
+    neg_x, mem, _ = adder_subtractor(
+        zero, x, add=False, start=j, extend_by=1)
+    ext_x = sign_extension(x, n + 1)
+    j += len(mem)
+    r, ite_mem = ite_function(guard, neg_x, ext_x, start=j)
+    j = _extend_memory(mem, ite_mem, j)
+    return r, mem
+
+
 def equalize_width(x, y, extend_by=0):
     """Return bitvectors of equal len by applying sign extension."""
     logger.info('++ equalize width...')
@@ -821,6 +850,41 @@ def sign_extension(x, n):
     assert len(y) == n
     logger.debug('-- result of extension: {y}\n'.format(y=y))
     return y
+
+
+def pad(x, n):
+    """Return `x` left-padded with zeros to width `n`.
+
+    @type x: `list`
+    @type n: `int` > 0
+    """
+    m = n - len(x)
+    assert m > 0, (n, m, x)
+    return x + m * ['0']
+
+
+def sign(x):
+    """Return sign bit (MSB) of `x` in two's complement.
+
+    @type x: `list` of `str`
+    @return: `str` ('0' or '1')
+    """
+    return x[-1]
+
+
+def _extend_memory(mem, more_mem, start):
+    """Return new start address after appending memory.
+
+    @param mem: memory to be extended
+    @param more_mem: memory elements to append
+    @type mem, more_mem: `list`
+    @param start: last `mem` element has address `start - 1`
+    @type start: `int` with `start >= len(mem)`
+    """
+    assert start >= len(mem), (start, len(mem))
+    mem.extend(more_mem)
+    start += len(more_mem)
+    return start
 
 
 def _format_mem(mem):

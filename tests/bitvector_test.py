@@ -201,6 +201,21 @@ def test_twos_complement_for_int():
         assert k == f(v)
 
 
+def test_abs():
+    x = ['1', '0']
+    r, mem = bv.abs_(x)
+    a = _evaluate_result(r, mem)
+    assert a == 1, a
+    x = ['0', '1']
+    r, mem = bv.abs_(x)
+    a = _evaluate_result(r, mem)
+    assert a == 2, a
+    x = ['1', '1']
+    r, mem = bv.abs_(x)
+    a = _evaluate_result(r, mem)
+    assert a == 1, a
+
+
 def test_equalize_width():
     x = list('0101')
     y = list('10')
