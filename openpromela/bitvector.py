@@ -597,20 +597,35 @@ def barrel_shifter(x, y, s=None, start=0):
     return c, mem
 
 
-def fixed_shift(x, c):
-    """Shift `x` left by fixed distance `s`.
+def fixed_shift(x, c, left, logical=False, truncate=True):
+    """Shift `x` by fixed distance `s`.
 
     @param x: shift (vector to be shifted)
     @type x: `list` of `str`
     @param c: shift distance
     @type c: `int` with: `0 <= c <= len(x)`
+    @param left: if `True` shift left, else right
+    @param logical: if `True` insert zeros,
+        else replicate sign bit of `x`.
+    @param truncate: if `True`, result has same width as `x`
 
     @return: shifted `x`
     @rtype: `list` of `str`
     """
     n = len(x)
-    assert 0 <= c <= n
-    return c * ['0'] + x[:n - c]
+    assert 0 <= c <= n, (c, n, x)
+    if left:
+        if truncate:
+            return c * ['0'] + x[:n - c]
+        else:
+            return c * ['0'] + x
+    # right shift
+    # logical or arithmetic ?
+    if logical:
+        s = '0'
+    else:
+        s = x[-1]
+    return x[c:] + c * [s]
 
 
 def truncate(x, n):

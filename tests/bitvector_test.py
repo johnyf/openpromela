@@ -106,6 +106,27 @@ def test_flatten_arithmetic():
     # TODO: subtraction
 
 
+def test_fixed_shift():
+    # 0 is LSB
+    x = ['0', '1', '0']
+    c = 1
+    r = bv.fixed_shift(x, c, left=True, logical=None)
+    assert r == ['0', '0', '1'], r
+    c = 2
+    r = bv.fixed_shift(x, c, left=True, logical=None)
+    assert r == ['0', '0', '0'], r
+    c = 1
+    r = bv.fixed_shift(x, c, left=False, logical=False)
+    assert r == ['1', '0', '0'], r
+    x = ['0', '1', '1']
+    # unsigned
+    r = bv.fixed_shift(x, c, left=False, logical=True)
+    assert r == ['1', '1', '0']
+    # signed
+    r = bv.fixed_shift(x, c, left=False, logical=False)
+    assert r == ['1', '1', '1']
+
+
 def test_barrel_shifter():
     x = ['x0', 'x1', 'x2', 'x3']
     y = ['y0', 'y1']
