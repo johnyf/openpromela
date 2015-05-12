@@ -882,8 +882,8 @@ def test_constrain_global_declarative_vars():
     z.insert_logic_var(t, 'sys', 'global')
     w = logic.AST.VarDef('w', 'bool', owner='sys', free=True)
     w.insert_logic_var(t, 'sys', 'global')
-    global_defs = [y, z, w]
-    r = logic.constrain_global_declarative_vars(t, global_defs, 'env')
+    # global_defs = [y, z, w]
+    r = logic.freeze_declarative_vars(t, 'env')
     s = (
         '(((X pidglobal_y) <-> pidglobal_y)) &'
         ' (((X pidglobal_z) <-> pidglobal_z))')

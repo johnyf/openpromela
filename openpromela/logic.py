@@ -1800,25 +1800,30 @@ def constrain_local_declarative_vars(t):
     return c['env'], c['sys']
 
 
-def constrain_global_declarative_vars(t, global_defs, player):
-    """Return constraints for all free global vars.
+def freeze_declarative_vars(t, player):
+    """Return constraints for all free vars global or in other's pids.
 
     Effective when other player takes an atomic transition.
     """
     logger.info('++ constraining free global vars...')
+    # freeze free vars of `player` in global scope or
+    # in opponent's processes
     c = list()
-    for vardef in global_defs:
-        name = vardef.name
-        assert name in t.scopes['global'], (name, t)
-        d = t.scopes['global'][name]
-        if not d['free']:
-            logger.debug('"{var}" not free variable'.format(var=name))
+    for pid, scope in t.scopes.iteritems():
+        # not global or in opponent process ?
+        if pid == 'aux':
             continue
-        if d['owner'] != player:
+        if pid != 'global' and t.pids[pid]['assume'] == player:
             continue
-        # declarative global var
-        s = _invariant(d['flatname'], d['dom'], d['length'])
-        c.append(s)
+        for var, d in scope.iteritems():
+            if not d['free']:
+                logger.debug('"{var}" not free variable'.format(var=var))
+                continue
+            if d['owner'] != player:
+                continue
+            # declarative var
+            s = _invariant(d['flatname'], d['dom'], d['length'])
+            c.append(s)
     r = conj(c)
     logger.info('-- done with free global vars.\n')
     return r
@@ -2114,15 +2119,14 @@ def compile_spec(code, strict_atomic=True):
     if deactivate:
         ps = top_ps['sys']
         _, max_gid = vartable.products[ps]['dom']
-        freeze_globals = constrain_global_declarative_vars(
-            vartable, global_defs, 'env')
+        freeze_free = freeze_declarative_vars(vartable, 'env')
         env_ltl_safe = (
             'ite( (pm_sys & ((X {ps}) = ex_sys) &'
-            ' (ex_sys < {max_gid})), {freeze_globals}, {safe})').format(
+            ' (ex_sys < {max_gid})), {freeze}, {safe})').format(
                 max_gid=max_gid,
                 safe=env_ltl_safe,
                 ps=ps,
-                freeze_globals=freeze_globals)
+                freeze=freeze_free)
         sys_ltl_safe = (
             '( ( ((X {ps}) = ex_sys) &'
             ' (ex_sys < {max_gid})) | {safe})').format(
