@@ -112,7 +112,7 @@ def dom_to_width(dom):
     minval, maxval = dom
     logger.debug('int in ({m}, {M})'.format(
         m=minval, M=maxval))
-    signed = (minval < 0) or (maxval < 0)
+    signed = (minval < 0) and (maxval > 0)
     absval = max(abs(minval), abs(maxval))
     width = absval.bit_length()
     if width == 0:
@@ -220,8 +220,7 @@ def bitfields_to_ints(bit_state, t):
         # this is an integer var
         bitnames = d['bitnames']
         bitvalues = [bit_state[b] for b in bitnames]
-        if not d['signed']:
-            bitvalues.append('0')
+        _append_sign_bit(bitvalues, flatname, d)
         int_state[flatname] = twos_complement_to_int(bitvalues)
     return int_state
 
@@ -812,35 +811,60 @@ def ite_connective(a, b, c):
         a=a, b=b, c=c, i=0)
 
 
-def var_to_twos_complement(p, t):
+def var_to_twos_complement(var, t):
     """Return `list` of bits in two's complement."""
     # little-endian encoding
     logger.info(
-        '++ encode variable "{p}" to 2s complement'.format(p=p))
-    _assert_var_in_table(p, t)
-    v = t[p]
+        '++ encode variable "{var}" to 2s complement'.format(var=var))
+    _assert_var_in_table(var, t)
+    d = t[var]
     # arithmetic operators defined only for integers
-    if v['type'] == 'bool':
+    if d['type'] == 'bool':
         raise TypeError((
             '2s complement undefined for '
-            'Boolean variable "{p}"').format(p=p))
-    bits = list(v['bitnames'])
-    logger.debug('bits of "{p}": {bits}"'.format(p=p, bits=bits))
-    if v['signed']:
-        logger.debug('variable "{p}" is signed'.format(p=p))
+            'Boolean variable "{var}"').format(var=var))
+    bits = list(d['bitnames'])
+    _append_sign_bit(bits, var, d)
+    assert len(bits) > 1
+    logger.debug('encoded variable "{var}":\n\t{bits}'.format(
+        var=var, bits=bits))
+    logger.info('-- done encoding variable "{var}".\n'.format(var=var))
+    return bits
+
+
+def _append_sign_bit(bits, var, d):
+    """Convert trimmed bitfield to two's complement.
+
+    The bitfield `bits` is modified by appending a sign bit.
+    The integer variable represented by `bits` should be sign-definite.
+    As given, `bits` is a bitfield that stores the two's complement
+    with omitted sign bit, because it is constant.
+
+    @type bits: `list`
+    @param d: attributes of integer
+    @type d: `dict`
+    """
+    logger.debug('bits of "{var}": {bits}"'.format(var=var, bits=bits))
+    # variable sign ?
+    if d['signed']:
+        logger.debug('variable "{var}" is signed'.format(var=var))
         if len(bits) < 2:
             raise ValueError(
                 'A signed bitvector must have at least 2 bits.\n'
-                'Got instead, for variable "{p}",'.format(p=p) +
+                'Got instead, for variable "{var}",'.format(var=var) +
                 ' the bitvector:\n\t {bits}'.format(bits=bits))
+        return
+    # sign-definite
+    logger.debug('variable "{var}" has fixed sign'.format(var=var))
+    min_, max_ = d['dom']
+    assert min_ * max_ >= 0, (min_, max_)
+    # positive ?
+    if min_ >= 0:
+        sign_bit = '0'
     else:
-        logger.debug('variable "{p}" is unsigned'.format(p=p))
-        bits.append('0')
-    assert len(bits) > 1
-    logger.debug('encoded variable "{p}":\n\t{bits}'.format(
-        p=p, bits=bits))
-    logger.info('-- done encoding variable "{p}".\n'.format(p=p))
-    return bits
+        sign_bit = '1'
+    bits.append(sign_bit)
+    assert len(bits) > 1, len(bits)
 
 
 def _is_bool_var(name, t):

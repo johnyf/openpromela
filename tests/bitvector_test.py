@@ -295,15 +295,24 @@ def test_truncate():
 
 
 def test_twos_complement_for_var():
-    t = {'x': {'type': 'bool'},
-         'y': {'type': 'int', 'signed': True, 'bitnames': ['y0', 'y1']},
-         'z': {'type': 'int', 'signed': False, 'bitnames': ['z0']}}
+    t = dict(
+        x=dict(type='bool'),
+        y=dict(type='int', dom=(-2, 1), signed=True,
+               bitnames=['y0', 'y1']),
+        z=dict(type='int', dom=(0, 1), signed=False,
+               bitnames=['z0']),
+        w=dict(type='int', dom=(-1, 0), signed=False,
+               bitnames=['w0']))
     with nt.assert_raises(Exception):
         bv.var_to_twos_complement('r', t)
     with nt.assert_raises(TypeError):
         bv.var_to_twos_complement('x', t)
-    assert bv.var_to_twos_complement('y', t) == ['y0', 'y1']
-    assert bv.var_to_twos_complement('z', t) == ['z0', '0']
+    y = bv.var_to_twos_complement('y', t)
+    assert y == ['y0', 'y1'], y
+    z = bv.var_to_twos_complement('z', t)
+    assert z == ['z0', '0'], z
+    w = bv.var_to_twos_complement('w', t)
+    assert w == ['w0', '1'], w
 
 
 def test_twos_complement_for_int():
