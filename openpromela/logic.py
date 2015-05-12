@@ -1922,12 +1922,19 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
                 '(X {ps} != {ps_max})\n').format(ps=ps, ps_max=ps_max))
         elif player == 'env':
             other_player = 'sys'
-            pm_sys = pm_str(other_player)
             if atomic['sys']:
+                pm_sys = pm_str(other_player)
+                ps_sys = top_ps['sys']
+                ex_sys = 'ex_sys'
+                _, ps_max_sys = t.scopes['aux'][ps_sys]['dom']
                 safety[player].append((
                     '\n\n# never deadlock, unless preempted by sys:\n'
-                    '((X {ps} = {ps_max}) <-> {pm})\n').format(
-                        ps=ps, ps_max=ps_max, pm=pm_sys))
+                    '((X {ps} = {ps_max}) <-> '
+                    '({pm} & (X {ps_sys} = {ex_sys}) & '
+                    '({ex_sys} < {ps_max_sys}) ))\n').format(
+                        ps=ps, ps_max=ps_max, pm=pm_sys,
+                        ps_sys=ps_sys, ex_sys=ex_sys,
+                        ps_max_sys=ps_max_sys))
             else:
                 safety[player].append((
                     '\n\n# never deadlock:\n'
