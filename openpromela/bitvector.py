@@ -19,6 +19,7 @@ from omega.logic import lexyacc
 from omega.logic.ast import Nodes as _Nodes
 
 
+ALU_BITWIDTH = 32
 logger = logging.getLogger(__name__)
 
 
@@ -572,10 +573,11 @@ def multiplier(x, y, start=0):
     p, q = equalize_width(x, y, extend_by=min(nx, ny))
     res, mem = _multiplier(p, q, s=None, start=start)
     assert len(res) == n, (len(res), n)
-    if n > 32:
+    if n > ALU_BITWIDTH:
         print('WARNING: (openpromela.bitvector) '
-              'Truncating multiplication to 32 bits.')
-        res = truncate(res, 32)
+              'Truncating multiplication to {alu} bits.'.format(
+                  alu=ALU_BITWIDTH))
+        res = truncate(res, ALU_BITWIDTH)
     return res, mem
 
 
@@ -965,7 +967,7 @@ def sign_extension(x, n):
     logger.debug(
         '++ sign extension to {n} bits of: {x}'.format(x=x, n=n))
     assert isinstance(x, list)
-    assert n < 32, n
+    assert n < ALU_BITWIDTH, n
     m = len(x)
     if m < 2:
         raise ValueError('"{x}" has less than 2 bits.'.format(x=x))
