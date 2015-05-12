@@ -2339,7 +2339,7 @@ def command_line_wrapper():
             n=len(mealy)))
     if args.pdf:
         if args.symbolic:
-            print('BDD not dumped to file yet.')
+            print('BDD not dumped to PDF file.')
         else:
             mealy.dump('out.pdf')
     else:
