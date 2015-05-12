@@ -1466,7 +1466,7 @@ def graph_to_control_flow(g, t, pid, aut):
         trans = disj(r)
         # selected out-edge must be unblocked
         post = '( ((X {aux}) < {n}) & ({trans}) )'.format(
-            pc=pc, u=u, aux=aux, n=n, trans=trans)
+            aux=aux, n=n, trans=trans)
         # if at that pc location
         if g.assume == 'env' and g.owner == 'sys':
             # sys has to eval primed "blocked" expressions
@@ -1483,6 +1483,7 @@ def graph_to_control_flow(g, t, pid, aut):
 
 
 def initialize_pc_next(g, t, pid, aut):
+    """Return initial condition for auxiliary var `pc_next`."""
     root = g.root
     pc_next = pid_to_pc_next(pid, g.assume, g.owner)
     aux = pid_to_key(t, pid)
@@ -1833,9 +1834,9 @@ def constrain_local_declarative_vars(t):
                 logger.debug('"{var}" not free variable'.format(var=var))
                 continue
             # declarative var
-            s = 'X({ps} != {gid}) -> {invariant}'.format(
-                ps=ps, gid=gid, invariant=_invariant(
-                    d['flatname'], d['dom'], d['length']))
+            inv = _invariant(d['flatname'], d['dom'], d['length'])
+            s = '((X {ps}) != {gid}) -> {invariant}'.format(
+                ps=ps, gid=gid, invariant=inv)
             var_owner = d['owner']
             c[var_owner].append(s)
     for k, v in c.iteritems():
@@ -2153,7 +2154,6 @@ def compile_spec(code, strict_atomic=True):
      sys_safe, env_prog, sys_prog, atomic, top_ps) = \
         products_to_logic(products, global_defs)
     ltl_spc = transform_ltl_blocks(ltl, vartable)
-    flat_table = vartable.flatten()
     # conjoin with ltl blocks
     env_ltl_init = ltl_spc['assume']['init']
     env_ltl_safe = ltl_spc['assume']['G']
@@ -2197,6 +2197,7 @@ def compile_spec(code, strict_atomic=True):
         sys_prog = list()
     # bundle
     spc = _symbolic.Automaton()
+    flat_table = vartable.flatten()
     spc.vars = flat_table
     spc.init['env'] = env_init
     spc.init['sys'] = sys_init
