@@ -822,7 +822,7 @@ class Table(object):
             parent_ps=parent_ps,
             gid=gid)
         self.add_var(
-            pid='global', name=ps, flatname=ps,
+            pid='aux', name=ps, flatname=ps,
             dom=dom, dtype='saturating', free=True, owner='env')
         return ps
 
@@ -899,7 +899,7 @@ def products_to_logic(products, global_defs):
         if player not in top_ps:
             continue
         ps = top_ps[player]
-        ps_dom = t.scopes['global'][ps]['dom']
+        ps_dom = t.scopes['aux'][ps]['dom']
         _, ps_max = ps_dom
         if atomic[player]:
             ex = 'ex_{player}'.format(player=player)
@@ -926,7 +926,7 @@ def products_to_logic(products, global_defs):
             for i in xrange(nk):
                 var = key_str(assume, owner, i)
                 dom = (0, max_key)
-                t.add_var(pid='global', name=var, flatname=var,
+                t.add_var(pid='aux', name=var, flatname=var,
                           dom=dom, dtype='saturating', free=True,
                           owner=owner)
     #
@@ -1908,7 +1908,7 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
     if player not in top_ps:
         return ('', '', '', '')
     ps = top_ps[player]
-    ps_dom = t.scopes['global'][ps]['dom']
+    ps_dom = t.scopes['aux'][ps]['dom']
     ps_min, ps_max = ps_dom
     assert ps_min == 0, ps_min
     assert ps_max >= 0, ps_max

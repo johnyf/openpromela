@@ -519,7 +519,7 @@ def test_env_sys_key():
     bit z;
 
     /* env top async product = ps0 */
-    assume ltl { []<>(ps0 == 0) && []<>(ps0 == 1) }
+    assume ltl { []<>(x == 1) && []<>(y == 1) }
 
     assume active env proctype producer_0(){
         bit x;
