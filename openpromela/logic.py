@@ -1182,7 +1182,7 @@ def process_to_logic(pid, t, atomic, pids, global_defs, aut):
     progress = collect_progress_labels(g, t, pid)
     # control flow constraints
     if g.assume != g.owner:
-        pcmust = graph_to_guards(g, t, pid, aut)
+        pcmust = graph_to_control_flow(g, t, pid, aut)
         pc_next_init = initialize_pc_next(g, t, pid, aut)
     else:
         pcmust = None
@@ -1393,7 +1393,7 @@ def form_notexe_condition(g, t, pid, global_defs, aut):
         for u, (b, freeze) in _disj.iteritems())
 
 
-def graph_to_guards(g, t, pid, aut):
+def graph_to_control_flow(g, t, pid, aut):
     """Require that the selected edge be executable."""
     assert g.owner != g.assume, (g.owner, g.assume)
     aux = pid_to_key(t, pid)
