@@ -139,7 +139,8 @@ class Parser(yacc.Parser):
         p[0] = self._end(p)
 
     def p_sync_unit(self, p):
-        """sync_unit : proc
+        """sync_unit : async
+                     | proc
                      | one_decl
         """
         p[0] = p[1]
