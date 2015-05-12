@@ -1468,8 +1468,11 @@ def initialize_pc_next(g, t, pid, aut):
         unblocked=unblocked, trans=trans)
 
 
-def _expr_to_guard(e, aut, player):
-    """Return expression after quantifying primed `player` vars."""
+def _expr_to_guard(e, aut, player, as_bdd=False):
+    """Return expression after quantifying primed `player` vars.
+
+    @param as_bdd: if `True`, return `bdd` node, else `str`
+    """
     assert player in ('env', 'sys'), player
     if player == 'env':
         qvars = aut.upvars
@@ -1482,7 +1485,10 @@ def _expr_to_guard(e, aut, player):
     u = _bdd.preimage(u, v, rename, qvars, bdd, forall=False)
     if u == -1:
         print('Warning: guard "{e}" evaluates to "False".'.format(e=e))
-    r = bdd.to_expr(u)
+    if as_bdd:
+        r = u
+    else:
+        r = bdd.to_expr(u)
     return r
 
 
