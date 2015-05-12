@@ -1187,6 +1187,11 @@ def process_to_logic(pid, t, atomic, pids, global_defs, aut):
     else:
         pcmust = None
         pc_next_init = None
+    # guards used to test for granting requests for atomic execution
+    if g.assume == 'sys':
+        unblocked_atomic = guards_for_loss_of_atomicity(g, t, pid, aut)
+    else:
+        unblocked_atomic = None
     # add to dict of pids
     d = dict(
         trans=trans,  # data flow
@@ -1194,7 +1199,8 @@ def process_to_logic(pid, t, atomic, pids, global_defs, aut):
         var2edges=var2edges,  # imperative var deconstraining
         notexe=notexe,  # blocked
         pcmust=pcmust,  # control flow
-        pc_next_init=pc_next_init)
+        pc_next_init=pc_next_init,
+        unblocked_atomic=unblocked_atomic)
     pids[pid] = d
     logger.debug('transitions of process "{pc}":\n {t}'.format(
                  pc=pc, t=trans))
@@ -1367,30 +1373,63 @@ def form_notexe_condition(g, t, pid, global_defs, aut):
     @rtype: `dict` of `str`
     """
     pc = pid_to_pc(pid)
-    _disj = dict()
+    c = dict()
     for u, du in g.nodes_iter(data=True):
         r = list()
         # at least one outedge always executable ?
         for _, v, key, d in g.edges_iter(u, data=True, keys=True):
-            c = d.get('stmt')
-            assert isinstance(c, (AST.Assignment,
-                                  AST.Expression, AST.Else))
-            e, _ = c.to_logic(t, pid, assume=g.assume)
+            stmt = d.get('stmt')
+            assert isinstance(
+                stmt, (AST.Assignment, AST.Expression, AST.Else))
+            e, _ = stmt.to_logic(t, pid, assume=g.assume)
             guard = _expr_to_guard(e, aut, g.assume)
             r.append(guard)
             if guard == 'True':
                 break
-        # if executed, is it atomic transition ?
-        if du['context'] == 'atomic':
-            assert g.assume == 'sys'
-            freeze = constrain_global_declarative_vars(t, global_defs, 'env')
-        else:
-            freeze = 'True'
         # u blocks if no executability condition is True
-        _disj[u] = (disj(r), freeze)
-    return disj(
-        '({pc} = {u}) & {f} & !({b})'.format(pc=pc, u=u, b=b, f=freeze)
-        for u, (b, freeze) in _disj.iteritems())
+        c[u] = disj(r)
+    s = disj(
+        '({pc} = {u}) & !({b})'.format(pc=pc, u=u, b=b)
+        for u, b in c.iteritems())
+    return s
+
+
+def guards_for_loss_of_atomicity(g, t, pid, aut):
+    """Return conditions for to test before granting exclusive execution."""
+    assert g.assume == 'sys', g.assume
+    pc = pid_to_pc(pid)
+    bdd = aut.bdd
+    c = list()
+    for u, du in g.nodes_iter(data=True):
+        u_in_atomic = (du['context'] == 'atomic')
+        r = list()
+        for _, v, key, d in g.edges_iter(u, keys=True, data=True):
+            stmt = d['stmt']
+            e, _ = stmt.to_logic(t, pid, assume=g.assume)
+            guard = _expr_to_guard(e, aut, player=g.assume, as_bdd=True)
+            # if executed, will it be an atomic transition ?
+            # note: ex_s = m(r) is added in `add_process_scheduler`
+            if u_in_atomic:
+                # freeze env by unpriming its primed vars
+                # (= they would not change if atomicity not lost)
+                # sys primed vars have been quantified already
+                # (use `rename` when extended to support
+                # target vars that are neighbors but essential)
+                support = bdd.support(guard, as_levels=True)
+                to_rename = {j for j in support if j in aut.upvars}
+                for level in to_rename:
+                    new_level = aut.unprime[level]
+                    var_node = bdd.find_or_add(new_level, -1, 1)
+                    guard = bdd.compose(guard, level, var_node)
+            guard = bdd.to_expr(guard)
+            r.append(guard)
+            if guard == 'True':
+                break
+        u_unblocked = disj(r)
+        s = '(({pc} = {u}) & ({u_unblocked}))'.format(
+            pc=pc, u=u, u_unblocked=u_unblocked)
+        c.append(s)
+    return disj(c)
 
 
 def graph_to_control_flow(g, t, pid, aut):
@@ -1908,13 +1947,18 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
         deadlock.setdefault(gid, list()).append(blocks_if)
         # if the player has any atomic blocks
         if atomic[player]:
+            # for now only system can have atomic blocks
+            assert player == 'sys', player
+            unblocked_atomic = pids[pid]['unblocked_atomic']
+            assert unblocked_atomic is not None
             # grant exclusive execution to requestor if executable
             ex = 'ex_{assume}'.format(assume=assume)
             safety['env'].append((
                 '\n# grant request for exclusive execution\n'
-                '( (({ex} = {gid}) & !({nexe})) -> '
+                '( (({ex} = {gid}) & ({unblocked_atomic})) -> '
                 '(X {ps} = {gid}) )').format(
-                    ex=ex, gid=gid, nexe=blocks_if, ps=ps))
+                    ex=ex, gid=gid,
+                    unblocked_atomic=unblocked_atomic, ps=ps))
     # player has no processes ?
     if player not in top_ps:
         return ('', '', '', '')
