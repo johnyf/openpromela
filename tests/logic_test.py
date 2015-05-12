@@ -593,6 +593,40 @@ def test_atomic_sys_env():
     assert logic.synthesize(c, strict_atomic=True) is not None
 
 
+def test_async_inside_sync():
+    # parsing
+    c = '''
+    bit x;
+
+    sync{
+
+    async{
+        proctype foo_0(){
+            x = 0
+        }
+        proctype foo_1(){
+            x = 1
+        }
+    }
+
+    proctype foo_2(){
+        x = 1
+    }
+
+    proctype foo_3(){
+        x = 1
+    }
+
+    }
+
+    proctype foo_3(){
+        x = 1
+    }
+    '''
+    p = logic._parser.parse(c)
+    print(p)
+
+
 def test_array():
     # single array parsed
     c = '''sys int(0, 3) x[3];'''
