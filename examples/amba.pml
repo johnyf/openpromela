@@ -1,3 +1,24 @@
+/*
+ * ARM AMBA AHB case study.
+ *
+ * Adapted from [2] as described in [1].
+ *
+ *
+ * References
+ * ==========
+ *
+ * [1] Ioannis Filippidis and Richard M. Murray
+ *     "Revisiting the AMBA AHB bus case study"
+ *     California Institute of Technology, 2015
+ *     http://resolver.caltech.edu/CaltechCDSTR:2015.004
+ *
+ * [2] Roderick Bloem, Barbara Jobstmann, Nir Piterman,
+ *     Amir Pnueli, Yaniv Sa'ar
+ *     "Synthesis of reactive(1) designs"
+ *     Journal of computer and system sciences
+ *     Vol.78, No.3, pp.911--938, 2012
+ */
+
 #define N 2  /* N + 1 masters */
 #define SINGLE 0
 #define BURST4 1
