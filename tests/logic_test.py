@@ -13,11 +13,13 @@ h = logging.FileHandler(BIT_LOG, mode='w')
 h.setLevel(logging.ERROR)
 bit_log.addHandler(h)
 
-logging.getLogger('promela.yacc').addHandler(h)
-
 # avoid nose dumping PDFs
+logging.getLogger('openpromela').setLevel('ERROR')
 logging.getLogger('promela.ast').setLevel('ERROR')
+logging.getLogger('promela.yacc').setLevel('ERROR')
 logging.getLogger('astutils').setLevel('ERROR')
+logging.getLogger('openpromela.logic').setLevel(1)
+logging.getLogger('openpromela.slugs').setLevel(1)
 
 
 class Parser(logic.Parser):
@@ -154,7 +156,7 @@ def test_assume_assert_realizability():
 
 def run_single():
     mealy = logic.synthesize(code['sys again'])
-    print mealy
+    print(mealy)
 
 
 def test_bdd_filename():
