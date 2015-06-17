@@ -15,6 +15,9 @@ A synthesizer from open Promela specifications. It:
 The language and implementation are documented in:
 
 Filippidis I., Murray R.M., Holzmann G.J.;
+A multi-paradigm language for reactive synthesis, 4th Workshop on Synthesis (SYNT'15), Electronic Proceedings in Theoretical Computer Science (EPTCS), San Francisco, CA, USA, July 2015
+
+Filippidis I., Murray R.M., Holzmann G.J.;
 [Synthesis from multi-paradigm specifications](http://resolver.caltech.edu/CaltechCDSTR:2015.003), California Institute of Technology, Pasadena, CA, 2015 (CDSTR:2015.003)
 
 
