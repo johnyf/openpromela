@@ -14,7 +14,7 @@ from networkx.utils import misc
 from promela import ast
 from promela import lex
 from promela import yacc
-from openpromela import bitvector
+from omega.logic import bitvector
 from omega.logic import past
 from openpromela import slugs
 from openpromela import _version

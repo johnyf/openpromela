@@ -15,7 +15,7 @@ import humanize
 from omega.symbolic import symbolic as _symbolic
 import natsort
 import networkx as nx
-from openpromela import bitvector
+from omega.logic import bitvector
 import psutil
 
 
