@@ -1,8 +1,7 @@
 import logging
 import os
 from nose.tools import assert_raises
-from openpromela import logic, bitvector
-import openpromela.bdd
+from openpromela import logic
 
 
 logger = logging.getLogger(__name__)
@@ -965,17 +964,6 @@ def test_remote_ref():
     assert isinstance(stmt, logic.AST.Expression), stmt
     f, _ = stmt.to_logic(t=t, pid=0)
     assert f == '(pc1 = 1)', (f, t.pids)
-
-
-def slugsin_parser(s, t):
-    """Helper that converts prefix to infix syntax for readability."""
-    slugs_table = t.to_slugs()
-    ltl_parser = bitvector.Parser()
-    p = ltl_parser.parse(s)
-    bitvector.add_bitnames(slugs_table)
-    s = p.flatten(t=slugs_table)
-    slugsin_parser = openpromela.bdd.PrefixParser()
-    print slugsin_parser.parse(s)
 
 
 def scaffold():
