@@ -150,7 +150,7 @@ def _check_data_types(t):
 def list_bits(dvars):
     """Return symbol table of bits (comprising bitfields).
 
-    For symbol table definition, see `bitblast`.
+    For symbol table definition, see `bitblast_table`.
 
     @param dvars: symbol table of integer and Boolean vars
     @type dvars: `dict` of `dict`
