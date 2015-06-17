@@ -551,13 +551,13 @@ def test_atomic_sys_sys():
     c = '''
     bool x;
 
-    active sys proctype foo(){
+    sys proctype foo(){
         do
         :: atomic{ !x; x = true; x; x = false }
         od
     }
 
-    active sys proctype spoiler(){
+    sys proctype spoiler(){
         do
         :: x = false; x
         od
