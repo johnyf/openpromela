@@ -193,7 +193,7 @@ def form_progress(i):
     return 'assert ltl { ' + prog + ' }'
 
 
-def run():
+def main():
     # args
     p = argparse.ArgumentParser()
     p.add_argument('--min', default=N, type=int,
@@ -208,7 +208,18 @@ def run():
                    help='use existing log files to generate plots')
     p.add_argument('--plot', action='store_true',
                    help='generate plots')
+    p.add_argument('--repeat', default=1, type=int,
+                   help='multiple runs from min to max')
     args = p.parse_args()
+    # multiple runs should be w/o plots
+    assert args.repeat == 1 or not args.plot
+    # multiple runs
+    for i in xrange(args.repeat):
+        print('run: {i}'.format(i=i))
+        run(args)
+
+
+def run(args):
     n = args.min
     m = args.max + 1
     # config logging
@@ -586,4 +597,4 @@ def plot_overall_summary(data, n_min, n_max):
 
 
 if __name__ == '__main__':
-    run()
+    main()
