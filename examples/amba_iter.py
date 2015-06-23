@@ -70,49 +70,6 @@ def snapshot_versions():
     json.dump(d, f, indent=4)
 
 
-def parse_log(i):
-    fname = './log_{i}_masters.txt'.format(i=i)
-    with open(fname, 'r') as f:
-        s = f.read()
-    data = dict(time=list(), rss=list(), vms=list())
-    for line in s.splitlines():
-        if 'call slugs' in line:
-            times = list()
-            rss_memory = list()
-            vms_memory = list()
-        elif 'slugs returned' in line:
-            data['time'].append(times)
-            data['rss'].append(rss_memory)
-            data['vms'].append(vms_memory)
-        else:
-            (t,) = re.findall('time:\s([\d\.:]+)', line)
-            c = re.findall('rss:\s([\d.]+)\s([kMG])B', line)
-            if c:
-                ((rss, size),) = c
-            else:
-                (rss,) = re.findall('rss:\s([\d.]+)\sBytes', line)
-            (vms,) = re.findall('vms:\s([\d]+)', line)
-            if '.' in t:
-                x = time.strptime(t, '%H:%M:%S.%f')
-            else:
-                x = time.strptime(t, '%H:%M:%S')
-            sec = datetime.timedelta(hours=x.tm_hour, minutes=x.tm_min,
-                                     seconds=x.tm_sec).total_seconds()
-            rss = float(rss)
-            if size == 'k':
-                rss = 10**-3 * rss
-            elif size == 'G':
-                rss = 10**3 * rss
-            vms = float(vms)
-            if rss < 0.1:
-                print('warning: read ~0 rss, discarding')
-                continue
-            times.append(sec)
-            rss_memory.append(rss)
-            vms_memory.append(vms)
-    return data
-
-
 def parse_logs():
     masters = range(N, M + 1)
     # parse logs
@@ -185,12 +142,47 @@ def parse_logs():
     plt.savefig(fname, bbox_inches='tight')
 
 
-def form_progress(i):
-    """Return conjunction of LTL formulae for progress."""
-    prog = ' && '.join(
-        '[]<>(request[{k}] -> (master == {k}))'.format(k=k)
-        for k in xrange(i))
-    return 'assert ltl { ' + prog + ' }'
+def parse_log(i):
+    fname = './log_{i}_masters.txt'.format(i=i)
+    with open(fname, 'r') as f:
+        s = f.read()
+    data = dict(time=list(), rss=list(), vms=list())
+    for line in s.splitlines():
+        if 'call slugs' in line:
+            times = list()
+            rss_memory = list()
+            vms_memory = list()
+        elif 'slugs returned' in line:
+            data['time'].append(times)
+            data['rss'].append(rss_memory)
+            data['vms'].append(vms_memory)
+        else:
+            (t,) = re.findall('time:\s([\d\.:]+)', line)
+            c = re.findall('rss:\s([\d.]+)\s([kMG])B', line)
+            if c:
+                ((rss, size),) = c
+            else:
+                (rss,) = re.findall('rss:\s([\d.]+)\sBytes', line)
+            (vms,) = re.findall('vms:\s([\d]+)', line)
+            if '.' in t:
+                x = time.strptime(t, '%H:%M:%S.%f')
+            else:
+                x = time.strptime(t, '%H:%M:%S')
+            sec = datetime.timedelta(hours=x.tm_hour, minutes=x.tm_min,
+                                     seconds=x.tm_sec).total_seconds()
+            rss = float(rss)
+            if size == 'k':
+                rss = 10**-3 * rss
+            elif size == 'G':
+                rss = 10**3 * rss
+            vms = float(vms)
+            if rss < 0.1:
+                print('warning: read ~0 rss, discarding')
+                continue
+            times.append(sec)
+            rss_memory.append(rss)
+            vms_memory.append(vms)
+    return data
 
 
 def run(args):
@@ -297,6 +289,14 @@ def run(args):
     with open(JSON_FILE, 'w') as f:
         json.dump(data, f)
     plot_overall_summary(data, args.min, args.max)
+
+
+def form_progress(i):
+    """Return conjunction of LTL formulae for progress."""
+    prog = ' && '.join(
+        '[]<>(request[{k}] -> (master == {k}))'.format(k=k)
+        for k in xrange(i))
+    return 'assert ltl { ' + prog + ' }'
 
 
 def plot_single_experiment(code, details_file, i):
