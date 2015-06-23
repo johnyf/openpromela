@@ -193,32 +193,6 @@ def form_progress(i):
     return 'assert ltl { ' + prog + ' }'
 
 
-def main():
-    # args
-    p = argparse.ArgumentParser()
-    p.add_argument('--min', default=N, type=int,
-                   help='from this # of masters')
-    p.add_argument('--max', default=M, type=int,
-                   help='to this # of masters')
-    p.add_argument('--debug', type=int, default=logging.ERROR,
-                   help='python logging level')
-    p.add_argument('--log', action='store_true',
-                   help='dump debug log file')
-    p.add_argument('--plotonly', action='store_true',
-                   help='use existing log files to generate plots')
-    p.add_argument('--plot', action='store_true',
-                   help='generate plots')
-    p.add_argument('--repeat', default=1, type=int,
-                   help='multiple runs from min to max')
-    args = p.parse_args()
-    # multiple runs should be w/o plots
-    assert args.repeat == 1 or not args.plot
-    # multiple runs
-    for i in xrange(args.repeat):
-        print('run: {i}'.format(i=i))
-        run(args)
-
-
 def run(args):
     n = args.min
     m = args.max + 1
@@ -594,6 +568,32 @@ def plot_overall_summary(data, n_min, n_max):
     #
     # separate analysis of logs
     # parse_logs()
+
+
+def main():
+    # args
+    p = argparse.ArgumentParser()
+    p.add_argument('--min', default=N, type=int,
+                   help='from this # of masters')
+    p.add_argument('--max', default=M, type=int,
+                   help='to this # of masters')
+    p.add_argument('--debug', type=int, default=logging.ERROR,
+                   help='python logging level')
+    p.add_argument('--log', action='store_true',
+                   help='dump debug log file')
+    p.add_argument('--plotonly', action='store_true',
+                   help='use existing log files to generate plots')
+    p.add_argument('--plot', action='store_true',
+                   help='generate plots')
+    p.add_argument('--repeat', default=1, type=int,
+                   help='multiple runs from min to max')
+    args = p.parse_args()
+    # multiple runs should be w/o plots
+    assert args.repeat == 1 or not args.plot
+    # multiple runs
+    for i in xrange(args.repeat):
+        print('run: {i}'.format(i=i))
+        run(args)
 
 
 if __name__ == '__main__':
