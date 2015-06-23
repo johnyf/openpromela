@@ -240,9 +240,25 @@ def main():
             print('Done synthesizing {i} masters in {dt}.'.format(i=i, dt=dt))
             # copy log file
             shutil.copy(logged_details_file, details_file)
-        if not args.plot:
-            continue
-        # parse and plot the details
+        if args.plot:
+            plot_single_experiment()
+    # dump as JSON
+    data = dict(
+        all_vars=all_vars,
+        env_vars=env_vars,
+        peak_total_nodes=peak_total_nodes,
+        strategy_sizes=strategy_sizes,
+        total_time=total_time,
+        realizability_time=realizability_time,
+        reordering_time=reordering_time)
+    with open(JSON_FILE, 'w') as f:
+        json.dump(data, f)
+    if args.plot:
+        plot_overall_summary()
+
+
+def plot_single_experiment():
+    """Parse and plot the details."""
         expr = (
             'time \(ms\): ([\d.]+), '
             'reordering \(ms\): ([\d.]+), '
@@ -438,19 +454,9 @@ def main():
         total_time.append(conj_time[-1])
         realizability_time.append(times[-1])
         reordering_time.append(conj_reorder[-1])
-    # dump as JSON
-    data = dict(
-        all_vars=all_vars,
-        env_vars=env_vars,
-        peak_total_nodes=peak_total_nodes,
-        strategy_sizes=strategy_sizes,
-        total_time=total_time,
-        realizability_time=realizability_time,
-        reordering_time=reordering_time)
-    if not args.plot:
-        return
-    with open(JSON_FILE, 'w') as f:
-        json.dump(data, f)
+
+
+def plot_overall_summary():
     # convert to numpy arrays
     all_vars = np.array(all_vars)
     env_vars = np.array(env_vars)
