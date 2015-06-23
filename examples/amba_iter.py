@@ -240,8 +240,20 @@ def main():
             print('Done synthesizing {i} masters in {dt}.'.format(i=i, dt=dt))
             # copy log file
             shutil.copy(logged_details_file, details_file)
-        if args.plot:
-            plot_single_experiment()
+        if not args.plot:
+            continue
+        w = plot_single_experiment(code, details_file, i)
+        all_vars.append(w[0])
+        env_vars.append(w[1])
+        # strategy size
+        peak_total_nodes.append(w[2])
+        strategy_sizes.append(w[3])
+        # times
+        total_time.append(w[4])
+        realizability_time.append(w[5])
+        reordering_time.append(w[6])
+    if not args.plot:
+        return
     # dump as JSON
     data = dict(
         all_vars=all_vars,
@@ -253,11 +265,10 @@ def main():
         reordering_time=reordering_time)
     with open(JSON_FILE, 'w') as f:
         json.dump(data, f)
-    if args.plot:
-        plot_overall_summary()
+    plot_overall_summary(data, args.min, args.max)
 
 
-def plot_single_experiment():
+def plot_single_experiment(code, details_file, i):
     """Parse and plot the details."""
     expr = (
         'time \(ms\): ([\d.]+), '
@@ -295,7 +306,6 @@ def plot_single_experiment():
     strategy_time = list()
     strategy_reorder = list()
     strategy_goal = list()
-    strategy_onion = list()
     strategy_nodes = list()
     strategy_strategy = list()
     strategy_cases = list()
@@ -445,18 +455,31 @@ def plot_single_experiment():
     # var numbers
     e = {bit for bit, d in aut.vars.iteritems()
          if d['owner'] == 'env'}
-    all_vars.append(len(aut.vars))
-    env_vars.append(len(e))
+    all_vars = len(aut.vars)
+    env_vars = len(e)
     # strategy size
-    peak_total_nodes.append(conj_nodes[-1])
-    strategy_sizes.append(conj_strategy[-1])
+    peak_total_nodes = conj_nodes[-1]
+    strategy_sizes = conj_strategy[-1]
     # times
-    total_time.append(conj_time[-1])
-    realizability_time.append(times[-1])
-    reordering_time.append(conj_reorder[-1])
+    total_time = conj_time[-1]
+    realizability_time = times[-1]
+    reordering_time = conj_reorder[-1]
+    r = (
+        all_vars, env_vars, peak_total_nodes,
+        strategy_sizes, total_time, realizability_time,
+        reordering_time)
+    return r
 
 
-def plot_overall_summary():
+def plot_overall_summary(data, n_min, n_max):
+    """Plot results over number of masters."""
+    all_vars = data['all_vars']
+    env_vars = data['env_vars']
+    peak_total_nodes = data['peak_total_nodes']
+    strategy_sizes = data['strategy_sizes']
+    total_time = data['total_time']
+    realizability_time = data['realizability_time']
+    reordering_time = data['reordering_time']
     # convert to numpy arrays
     all_vars = np.array(all_vars)
     env_vars = np.array(env_vars)
@@ -466,7 +489,7 @@ def plot_overall_summary():
     realizability_time = np.array(realizability_time)
     reordering_time = np.array(reordering_time)
     # plot collected results vs #masters
-    masters = np.arange(args.min, args.max + 1)
+    masters = np.arange(n_min, n_max + 1)
     plt.clf()
     # numbers of variables
     plt.subplot(4, 1, 1)
@@ -509,7 +532,8 @@ def plot_overall_summary():
     ax.set_yscale('log')
     plt.grid()
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.savefig('strategy_sizes_and_variable_bumbers.pdf', bbox_inches='tight')
+    plt.savefig('strategy_sizes_and_variable_bumbers.pdf',
+                bbox_inches='tight')
     #
     # separate analysis of logs
     # parse_logs()
