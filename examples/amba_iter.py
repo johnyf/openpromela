@@ -73,6 +73,7 @@ def snapshot_versions():
 def parse_logs(n, m):
     """Plot time and memory for repeated experiments over range."""
     masters = range(n, m + 1)
+    fontsize = 10
     # parse logs
     all_data = dict()
     for i in masters:
@@ -120,20 +121,25 @@ def parse_logs(n, m):
     mean_time = [np.mean(a) for a in data['time']]
     plt.plot(x, mean_time, '--b')
     ax = plt.gca()
+    ax.tick_params(labelsize=fontsize)
     ax.set_yscale('log')
-    plt.ylabel('Total time (sec)')
+    plt.ylabel('Total time (sec)', fontsize=fontsize)
     plt.grid()
     plt.subplot(3, 1, 2)
     plt.boxplot(data['memory'], positions=x, manage_xticks=False)
     ax = plt.gca()
+    ax.tick_params(labelsize=fontsize)
     ax.set_yscale('log')
-    plt.ylabel('Max RSS memory (MB)')
+    plt.ylabel('Max RSS\nmemory (MB)', fontsize=fontsize)
     plt.grid()
     plt.subplot(3, 1, 3)
     plt.plot(x, num_of_samples, '--o')
     ax = plt.gca()
-    ax.set_yscale('log')
-    plt.ylabel('Number of samples')
+    ax.tick_params(labelsize=fontsize)
+    ya = ax.get_yaxis()
+    ya.set_major_locator(plt.MaxNLocator(integer=True))
+    plt.xlabel('Number of masters', fontsize=fontsize)
+    plt.ylabel('Number of\nsamples', fontsize=fontsize)
     plt.grid()
     if abs(M - N) > 16:
         ticks = [i for i in x if (i % 4 == 0)]
