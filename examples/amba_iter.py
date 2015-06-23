@@ -1,12 +1,19 @@
 #!/usr/bin/env python
+"""Run AMBA AHB case study for increasing number of masters.
+
+Process logs and plot results.
+"""
 import argparse
 import datetime
+import importlib
 from itertools import cycle
 import json
 import logging
 import re
 import shutil
+import subprocess
 import time
+import git
 import matplotlib as mpl
 # matplotlib.use('Agg')
 from matplotlib import pyplot as plt
@@ -22,9 +29,45 @@ mpl.rc('font', size=7)
 col_gen = cycle('bgrcmk')
 JSON_FILE = 'details.json'
 INPUT_FILE = 'amba.pml'
+CONFIG_FILE = 'config.json'
 DEBUG = False  # for this script only
 N = 2
 M = 17
+
+
+def git_version(path):
+    """Return SHA-dirty for repo under `path`."""
+    repo = git.Repo(path)
+    sha = repo.head.commit.hexsha
+    dirty = repo.is_dirty()
+    return sha + ('-dirty' if dirty else '')
+
+
+def snapshot_versions():
+    """Log versions of software used."""
+    paths = [
+        '~/github/openpromela',
+        '~/github/omega']
+    d = dict()
+    for path in paths:
+        sha = git_version(path)
+        d[path] = sha
+    # slugs binary version
+    cmd = ['slugs', '--version']
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p.wait()
+    if p.returncode != 0:
+        print p.returncode
+        raise Exception('`slugs` not found on path')
+    slugs_version = p.stdout.read().strip()
+    d['slugs'] = slugs_version
+    # versions of python packages
+    packages = ['dd', 'omega', 'promela', 'openpromela']
+    for s in packages:
+        pkg = importlib.import_module(s)
+        d[s] = pkg.__version__
+    f = open(CONFIG_FILE, 'w')
+    json.dump(d, f, indent=4)
 
 
 def parse_log(i):
@@ -184,6 +227,9 @@ def run():
         sh = logging.StreamHandler()
         logger.addHandler(sh)
         logger.setLevel(logging.DEBUG)
+    # capture execution environment
+    snapshot_versions()
+    # run
     all_vars = list()
     env_vars = list()
     peak_total_nodes = list()
