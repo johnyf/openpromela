@@ -150,7 +150,7 @@ def form_progress(i):
     return 'assert ltl { ' + prog + ' }'
 
 
-def main():
+def run():
     # args
     p = argparse.ArgumentParser()
     p.add_argument('--min', default=N, type=int,
@@ -540,4 +540,4 @@ def plot_overall_summary(data, n_min, n_max):
 
 
 if __name__ == '__main__':
-    main()
+    run()
