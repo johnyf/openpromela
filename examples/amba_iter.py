@@ -70,8 +70,9 @@ def snapshot_versions():
     json.dump(d, f, indent=4)
 
 
-def parse_logs():
-    masters = range(N, M + 1)
+def parse_logs(n, m):
+    """Plot time and memory for repeated experiments over range."""
+    masters = range(n, m + 1)
     # parse logs
     all_data = dict()
     for i in masters:
@@ -565,9 +566,6 @@ def plot_overall_summary(data, n_min, n_max):
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.savefig('strategy_sizes_and_variable_bumbers.pdf',
                 bbox_inches='tight')
-    #
-    # separate analysis of logs
-    # parse_logs()
 
 
 def main():
@@ -587,7 +585,12 @@ def main():
                    help='generate plots')
     p.add_argument('--repeat', default=1, type=int,
                    help='multiple runs from min to max')
+    p.add_argument('--plot-stats', action='store_true',
+                   help='plot time and memory for logged repeated runs')
     args = p.parse_args()
+    if args.plot_stats:
+        parse_logs(args.min, args.max)
+        return
     # multiple runs should be w/o plots
     assert args.repeat == 1 or not args.plot
     # multiple runs
