@@ -4,12 +4,12 @@ humanize==0.5.1
 natsort==3.5.3
 psutil==2.2.1
 subprocess32==3.2.6
+dd==0.0.4
+promela==0.0.1
 
 
 # dev versions
-https://github.com/johnyf/dd/archive/master.zip
 https://github.com/johnyf/omega/archive/master.zip
-https://github.com/johnyf/promela/archive/master.zip
 
 
 # dev tools
