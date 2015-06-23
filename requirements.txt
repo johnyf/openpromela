@@ -1,5 +1,5 @@
 # from pypi
-pip==6.1.1
+pip>=6.1.1
 humanize==0.5.1
 natsort==3.5.3
 psutil==2.2.1
