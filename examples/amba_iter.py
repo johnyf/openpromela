@@ -259,201 +259,201 @@ def main():
 
 def plot_single_experiment():
     """Parse and plot the details."""
-        expr = (
-            'time \(ms\): ([\d.]+), '
-            'reordering \(ms\): ([\d.]+), '
-            'sysj: ([\d]+), '
-            'envi: ([\d]+), '
-            'nodes: all: ([\d]+), '
-            'Z: ([\d]+), '
-            'Y: ([\d]+), '
-            'X: ([\d]+)')
-        expr2 = (
-            'time \(ms\): ([\d.]+), '
-            'reordering \(ms\): ([\d]+), '
-            'goal: ([\d]+), '
-            'onion_ring: ([\d]+), '
-            'nodes: all: ([\d]+), '
-            'strategy: ([\d]+), '
-            'cases_covered: ([\d]+), '
-            'new_cases: ([\d]+)\n')
-        expr3 = (
-            'time \(ms\): ([\d.]+), '
-            'reordering \(ms\): ([\d]+), '
-            'goal: ([\d]+), '
-            'nodes: all: ([\d]+), '
-            'combined_strategy: ([\d]+)')
-        times = list()
-        reorder = list()
-        sys = list()
-        env = list()
-        nodes = list()
-        x_nodes = list()
-        y_nodes = list()
-        z_nodes = list()
-        # strategy construction
-        strategy_time = list()
-        strategy_reorder = list()
-        strategy_goal = list()
-        strategy_onion = list()
-        strategy_nodes = list()
-        strategy_strategy = list()
-        strategy_cases = list()
-        strategy_new_cases = list()
-        # conj construction
-        conj_time = list()
-        conj_reorder = list()
-        conj_goal = list()
-        conj_nodes = list()
-        conj_strategy = list()
-        with open(details_file, 'r') as f:
-            for line in f:
-                c = re.findall(expr, line)
+    expr = (
+        'time \(ms\): ([\d.]+), '
+        'reordering \(ms\): ([\d.]+), '
+        'sysj: ([\d]+), '
+        'envi: ([\d]+), '
+        'nodes: all: ([\d]+), '
+        'Z: ([\d]+), '
+        'Y: ([\d]+), '
+        'X: ([\d]+)')
+    expr2 = (
+        'time \(ms\): ([\d.]+), '
+        'reordering \(ms\): ([\d]+), '
+        'goal: ([\d]+), '
+        'onion_ring: ([\d]+), '
+        'nodes: all: ([\d]+), '
+        'strategy: ([\d]+), '
+        'cases_covered: ([\d]+), '
+        'new_cases: ([\d]+)\n')
+    expr3 = (
+        'time \(ms\): ([\d.]+), '
+        'reordering \(ms\): ([\d]+), '
+        'goal: ([\d]+), '
+        'nodes: all: ([\d]+), '
+        'combined_strategy: ([\d]+)')
+    times = list()
+    reorder = list()
+    sys = list()
+    env = list()
+    nodes = list()
+    x_nodes = list()
+    y_nodes = list()
+    z_nodes = list()
+    # strategy construction
+    strategy_time = list()
+    strategy_reorder = list()
+    strategy_goal = list()
+    strategy_onion = list()
+    strategy_nodes = list()
+    strategy_strategy = list()
+    strategy_cases = list()
+    strategy_new_cases = list()
+    # conj construction
+    conj_time = list()
+    conj_reorder = list()
+    conj_goal = list()
+    conj_nodes = list()
+    conj_strategy = list()
+    with open(details_file, 'r') as f:
+        for line in f:
+            c = re.findall(expr, line)
+            if c:
+                t, r, sys_j, env_i, n, z, y, x = c[0]
+                times.append(t)
+                reorder.append(r)
+                sys.append(sys_j)
+                env.append(env_i)
+                nodes.append(n)
+                x_nodes.append(x)
+                y_nodes.append(y)
+                z_nodes.append(z)
+            else:
+                c = re.findall(expr2, line)
                 if c:
-                    t, r, sys_j, env_i, n, z, y, x = c[0]
-                    times.append(t)
-                    reorder.append(r)
-                    sys.append(sys_j)
-                    env.append(env_i)
-                    nodes.append(n)
-                    x_nodes.append(x)
-                    y_nodes.append(y)
-                    z_nodes.append(z)
+                    t, r, g, ring, n, strategy, nc, nn = c[0]
+                    strategy_time.append(t)
+                    strategy_reorder.append(r)
+                    strategy_goal.append(g)
+                    strategy_nodes.append(n)
+                    strategy_strategy.append(strategy)
+                    strategy_cases.append(nc)
+                    strategy_new_cases.append(nn)
                 else:
-                    c = re.findall(expr2, line)
-                    if c:
-                        t, r, g, ring, n, strategy, nc, nn = c[0]
-                        strategy_time.append(t)
-                        strategy_reorder.append(r)
-                        strategy_goal.append(g)
-                        strategy_nodes.append(n)
-                        strategy_strategy.append(strategy)
-                        strategy_cases.append(nc)
-                        strategy_new_cases.append(nn)
-                    else:
-                        c = re.findall(expr3, line)
-                        if not c:
-                            continue
-                        t, r, g, n, strategy = c[0]
-                        conj_time.append(t)
-                        conj_reorder.append(r)
-                        conj_goal.append(g)
-                        conj_nodes.append(n)
-                        conj_strategy.append(strategy)
-        times = np.array(times, dtype=float)
-        strategy_time = np.array(strategy_time, dtype=float) + times[-1]
-        conj_time = np.array(conj_time, dtype=float) + times[-1]
-        # print list(zip(times, reorder, sys, env,
-        #            nodes, x_nodes, y_nodes, z_nodes))
-        n = 7
-        fig = plt.figure()
-        fig.set_size_inches(5, 10)
-        plt.clf()
-        plt.subplots_adjust(hspace=0.3)
-        ax = plt.subplot(n, 1, 1)
-        ax.set_aspect('equal')
-        plt.plot(times, reorder)
-        plt.plot(strategy_time, strategy_reorder)
-        plt.plot([strategy_time[-1], conj_time[0]],
-                 [strategy_reorder[-1], conj_reorder[0]], '--')
-        plt.plot(conj_time, conj_reorder)
-        plt.axvspan(strategy_time[0], strategy_time[-1],
-                    facecolor='g', alpha=0.2, edgecolor='none',
-                    zorder=10)
-        x_bisector = [0, conj_time[-1]]
-        plt.plot(x_bisector, x_bisector, 'k:')
-        plt.locator_params(nbins=4)
-        plt.ylabel('Reordering (ms)')
-        plt.grid()
-        ax.ticklabel_format(style='sci', scilimits=(0, 0))
-        # goals
-        ax = plt.subplot(n, 1, 2)
-        plt.plot(times, sys)
-        plt.plot(strategy_time, strategy_goal)
-        plt.plot(conj_time, conj_goal)
-        plt.axvspan(strategy_time[0], strategy_time[-1],
-                    facecolor='g', alpha=0.2, edgecolor='none',
-                    zorder=10)
-        plt.ylabel('Goal $j$')
-        plt.grid()
-        ax.ticklabel_format(style='sci', scilimits=(0, 0))
-        # assumptions
-        ax = plt.subplot(n, 1, 3)
-        plt.plot(times, env)
-        plt.plot(conj_time, 0 * conj_time)
-        plt.axvspan(strategy_time[0], strategy_time[-1],
-                    facecolor='g', alpha=0.2, edgecolor='none',
-                    zorder=10)
-        plt.ylabel('Assumption $i$')
-        plt.grid()
-        ax.ticklabel_format(style='sci', scilimits=(0, 0))
-        # total number of nodes
-        ax = plt.subplot(n, 1, 4)
-        plt.plot(times, nodes)
-        plt.plot(strategy_time, strategy_nodes)
-        plt.plot([strategy_time[-1], conj_time[0]],
-                 [strategy_nodes[-1], conj_nodes[0]], '--')
-        plt.axvspan(strategy_time[0], strategy_time[-1],
-                    facecolor='g', alpha=0.2, edgecolor='none',
-                    zorder=10)
-        plt.plot(conj_time, conj_nodes)
-        plt.ylabel('Total BDD Nodes')
-        plt.grid()
-        ax.ticklabel_format(style='sci', scilimits=(0, 0))
-        # nodes for each fixed point set
-        ax = plt.subplot(n, 1, 5)
-        plt.plot(times, x_nodes, 'b--', label='$X$')
-        line, = plt.plot(times, y_nodes, 'g-.', label='$Y$')
-        line.set_dashes([8, 4, 2, 4, 2, 4])
-        plt.plot(times, z_nodes, 'r-', label='$Z$')
-        plt.legend(bbox_to_anchor=(0.3, 1.1),
-                   loc='upper center', fontsize=5, ncol=3,
-                   handlelength=5)
-        plt.ylabel('Fixed points\n(BDD nodes)')
-        plt.grid()
-        ax.ticklabel_format(style='sci', scilimits=(0, 0))
-        # individual strategies
-        ax = plt.subplot(n, 1, 6)
-        plt.plot(strategy_time, strategy_strategy,
-                 'b-', label='$i^{th}$ strategy')
-        plt.plot(strategy_time, strategy_cases,
-                 'g--', label='covered states')
-        plt.plot(strategy_time, strategy_new_cases,
-                 'r-.', label='new states')
-        plt.ylabel('Individual strategies\n(BDD nodes)')
-        plt.grid()
-        plt.legend(bbox_to_anchor=(0.5, 1.15),
-                   loc='upper center', fontsize=5, ncol=3)
-        ax.set_yscale('log')
-        # ax.ticklabel_format(style='sci', scilimits=(0, 0))
-        # combined strategy
-        ax = plt.subplot(n, 1, 7)
-        plt.plot(conj_time, conj_strategy, 'o--', label='combined')
-        plt.xlabel('time (milliseconds)')
-        plt.ylabel('Combined strategy\n(BDD nodes)')
-        plt.grid()
-        ax.ticklabel_format(style='sci', scilimits=(0, 0))
-        # save
-        fname = 'details_{i}.pdf'.format(i=i)
-        plt.savefig(fname, bbox_inches='tight')
-        print('Done ploting {i} masters\n'.format(i=i))
-        # accumulate results for ploting vs #masters
-        #
-        # TODO: fix to use adapted strategy,
-        # even if not synthesizing
-        aut = logic.compile_spec(code, strict_atomic=True)
-        # var numbers
-        e = {bit for bit, d in aut.vars.iteritems()
-             if d['owner'] == 'env'}
-        all_vars.append(len(aut.vars))
-        env_vars.append(len(e))
-        # strategy size
-        peak_total_nodes.append(conj_nodes[-1])
-        strategy_sizes.append(conj_strategy[-1])
-        # times
-        total_time.append(conj_time[-1])
-        realizability_time.append(times[-1])
-        reordering_time.append(conj_reorder[-1])
+                    c = re.findall(expr3, line)
+                    if not c:
+                        continue
+                    t, r, g, n, strategy = c[0]
+                    conj_time.append(t)
+                    conj_reorder.append(r)
+                    conj_goal.append(g)
+                    conj_nodes.append(n)
+                    conj_strategy.append(strategy)
+    times = np.array(times, dtype=float)
+    strategy_time = np.array(strategy_time, dtype=float) + times[-1]
+    conj_time = np.array(conj_time, dtype=float) + times[-1]
+    # print list(zip(times, reorder, sys, env,
+    #            nodes, x_nodes, y_nodes, z_nodes))
+    n = 7
+    fig = plt.figure()
+    fig.set_size_inches(5, 10)
+    plt.clf()
+    plt.subplots_adjust(hspace=0.3)
+    ax = plt.subplot(n, 1, 1)
+    ax.set_aspect('equal')
+    plt.plot(times, reorder)
+    plt.plot(strategy_time, strategy_reorder)
+    plt.plot([strategy_time[-1], conj_time[0]],
+             [strategy_reorder[-1], conj_reorder[0]], '--')
+    plt.plot(conj_time, conj_reorder)
+    plt.axvspan(strategy_time[0], strategy_time[-1],
+                facecolor='g', alpha=0.2, edgecolor='none',
+                zorder=10)
+    x_bisector = [0, conj_time[-1]]
+    plt.plot(x_bisector, x_bisector, 'k:')
+    plt.locator_params(nbins=4)
+    plt.ylabel('Reordering (ms)')
+    plt.grid()
+    ax.ticklabel_format(style='sci', scilimits=(0, 0))
+    # goals
+    ax = plt.subplot(n, 1, 2)
+    plt.plot(times, sys)
+    plt.plot(strategy_time, strategy_goal)
+    plt.plot(conj_time, conj_goal)
+    plt.axvspan(strategy_time[0], strategy_time[-1],
+                facecolor='g', alpha=0.2, edgecolor='none',
+                zorder=10)
+    plt.ylabel('Goal $j$')
+    plt.grid()
+    ax.ticklabel_format(style='sci', scilimits=(0, 0))
+    # assumptions
+    ax = plt.subplot(n, 1, 3)
+    plt.plot(times, env)
+    plt.plot(conj_time, 0 * conj_time)
+    plt.axvspan(strategy_time[0], strategy_time[-1],
+                facecolor='g', alpha=0.2, edgecolor='none',
+                zorder=10)
+    plt.ylabel('Assumption $i$')
+    plt.grid()
+    ax.ticklabel_format(style='sci', scilimits=(0, 0))
+    # total number of nodes
+    ax = plt.subplot(n, 1, 4)
+    plt.plot(times, nodes)
+    plt.plot(strategy_time, strategy_nodes)
+    plt.plot([strategy_time[-1], conj_time[0]],
+             [strategy_nodes[-1], conj_nodes[0]], '--')
+    plt.axvspan(strategy_time[0], strategy_time[-1],
+                facecolor='g', alpha=0.2, edgecolor='none',
+                zorder=10)
+    plt.plot(conj_time, conj_nodes)
+    plt.ylabel('Total BDD Nodes')
+    plt.grid()
+    ax.ticklabel_format(style='sci', scilimits=(0, 0))
+    # nodes for each fixed point set
+    ax = plt.subplot(n, 1, 5)
+    plt.plot(times, x_nodes, 'b--', label='$X$')
+    line, = plt.plot(times, y_nodes, 'g-.', label='$Y$')
+    line.set_dashes([8, 4, 2, 4, 2, 4])
+    plt.plot(times, z_nodes, 'r-', label='$Z$')
+    plt.legend(bbox_to_anchor=(0.3, 1.1),
+               loc='upper center', fontsize=5, ncol=3,
+               handlelength=5)
+    plt.ylabel('Fixed points\n(BDD nodes)')
+    plt.grid()
+    ax.ticklabel_format(style='sci', scilimits=(0, 0))
+    # individual strategies
+    ax = plt.subplot(n, 1, 6)
+    plt.plot(strategy_time, strategy_strategy,
+             'b-', label='$i^{th}$ strategy')
+    plt.plot(strategy_time, strategy_cases,
+             'g--', label='covered states')
+    plt.plot(strategy_time, strategy_new_cases,
+             'r-.', label='new states')
+    plt.ylabel('Individual strategies\n(BDD nodes)')
+    plt.grid()
+    plt.legend(bbox_to_anchor=(0.5, 1.15),
+               loc='upper center', fontsize=5, ncol=3)
+    ax.set_yscale('log')
+    # ax.ticklabel_format(style='sci', scilimits=(0, 0))
+    # combined strategy
+    ax = plt.subplot(n, 1, 7)
+    plt.plot(conj_time, conj_strategy, 'o--', label='combined')
+    plt.xlabel('time (milliseconds)')
+    plt.ylabel('Combined strategy\n(BDD nodes)')
+    plt.grid()
+    ax.ticklabel_format(style='sci', scilimits=(0, 0))
+    # save
+    fname = 'details_{i}.pdf'.format(i=i)
+    plt.savefig(fname, bbox_inches='tight')
+    print('Done ploting {i} masters\n'.format(i=i))
+    # accumulate results for ploting vs #masters
+    #
+    # TODO: fix to use adapted strategy,
+    # even if not synthesizing
+    aut = logic.compile_spec(code, strict_atomic=True)
+    # var numbers
+    e = {bit for bit, d in aut.vars.iteritems()
+         if d['owner'] == 'env'}
+    all_vars.append(len(aut.vars))
+    env_vars.append(len(e))
+    # strategy size
+    peak_total_nodes.append(conj_nodes[-1])
+    strategy_sizes.append(conj_strategy[-1])
+    # times
+    total_time.append(conj_time[-1])
+    realizability_time.append(times[-1])
+    reordering_time.append(conj_reorder[-1])
 
 
 def plot_overall_summary():
