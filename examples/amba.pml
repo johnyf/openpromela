@@ -71,7 +71,7 @@ assert ltl {
 		 * only when communicating slave signals
 		 * that it completed receiving data.
 		 */
-		&& (ready -> ((master' == grant) && (lock' <-> lockmemo)))
+		&& (ready -> ((master' == grant) && (lock' <-> lockmemo')))
 		/* G6: current master and locking may change only
 		 * when an access starts, and remain invariant otherwise
 		 */
@@ -80,16 +80,16 @@ assert ltl {
 			(lock' <-> lock)))
 		/* G7: when deciding, remember if the requestor
 		 * requested also locking.
-		 * when implementing the circuit, route:
-		 * grantee_lockreq = lockreq[grant']
+		 * when implementing the circuit, store
+		 * previous lock requests:
+		 * grantee_lockreq' = (--X lockreq)[grant]
 		 */
-		&& (decide -> (lockmemo' <-> grantee_lockreq))
+		&& ((--X decide) -> (lockmemo' <-> grantee_lockreq'))
 		/* G8: current grantee and locking memo
 		 * remain invariant while not deciding.
 		 */
-		&& (! decide -> (
-			(grant' == grant) &&
-			(lockmemo' <-> lockmemo)))
+		&& ( (! decide) -> (grant' == grant) )
+		&& ( (! --X decide) -> (lockmemo' <-> lockmemo) )
 		/* G10: only a requestor can become grantee */
 		&& ((grant' == grant) || (grant' == 0) || request[grant'])
 	)
