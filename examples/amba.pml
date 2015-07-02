@@ -55,7 +55,7 @@ assume env proctype withdraw_lock(){
 	do
 	:: lock;
 		do
-		:: ! master_lockreq; break
+		:: ! master_lockreq'; break
 		:: true /* wait */
 		od
 	:: else
@@ -120,7 +120,7 @@ assert sys proctype maintain_lock(){
 	do
 	:: (lock && start && (burst == INCR));
 		do
-		:: (! start && ! master_lockreq); break
+		:: (! start && ! master_lockreq'); break
 		:: ! start
 		od
 	:: else
