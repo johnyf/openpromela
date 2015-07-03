@@ -1,3 +1,3 @@
 clean:
-	-rm *.txt *.pdf
+	-rm *.txt *.pdf *.json
 
