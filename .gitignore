@@ -18,3 +18,5 @@ Icon?
 *.txt
 *.log
 *.egg-info
+*.json
+
