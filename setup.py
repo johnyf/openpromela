@@ -17,6 +17,7 @@ s = (
     "version = '{version}'\n").format(version=version)
 install_requires = [
     'dd >= 0.0.4',
+    'gitpython >= 1.0.1',
     'humanize >= 0.5.1',
     'natsort >= 3.5.3',
     'networkx >= 1.9.1',
