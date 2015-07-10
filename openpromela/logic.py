@@ -863,8 +863,11 @@ class Table(object):
             b = {k: d[k] for k in attr}
             # flatten arrays
             flatnames = array_to_flatnames(d['flatname'], d['length'])
+            is_array = (d['length'] is not None)
             for x in flatnames:
-                t[x] = dict(b)
+                dx = dict(b)
+                dx['array'] = is_array
+                t[x] = dx
         logger.debug('result vars:\n {t}'.format(t=t))
         return t
 
@@ -1423,7 +1426,6 @@ def guards_for_loss_of_atomicity(g, t, pid, aut):
                 # TODO: ensure neighbors, then use `bdd.rename`
                 for pvar in to_rename:
                     var = aut.unprime[pvar]
-                    print(var, pvar)
                     var_node = bdd.var(var)
                     guard = bdd.compose(guard, pvar, var_node)
                 # confirm rename
