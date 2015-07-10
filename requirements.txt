@@ -4,7 +4,7 @@ humanize==0.5.1
 natsort==3.5.3
 psutil==2.2.1
 subprocess32==3.2.6
-dd==0.0.4
+dd==0.0.5
 promela==0.0.1
 
 
