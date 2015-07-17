@@ -491,9 +491,13 @@ def plot_single_experiment(code, details_file, i):
     # even if not synthesizing
     aut = logic.compile_spec(code, strict_atomic=True)
     # var numbers
-    e = {bit for bit, d in aut.vars.iteritems()
+    from omega.logic import bitvector as bv
+    from omega.symbolic import symbolic
+    bitblasted_aut = symbolic._bitblast(aut)
+    dbits = bv.list_bits(bitblasted_aut.vars)
+    all_vars = len(dbits)
+    e = {bit for bit, d in dbits.iteritems()
          if d['owner'] == 'env'}
-    all_vars = len(aut.vars)
     env_vars = len(e)
     # strategy size
     peak_total_nodes = conj_nodes[-1]
