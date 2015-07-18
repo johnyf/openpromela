@@ -66,6 +66,8 @@ def snapshot_versions():
     for s in packages:
         pkg = importlib.import_module(s)
         d[s] = pkg.__version__
+    t_now = time.strftime('%Y-%b-%d-%A-%T-%Z')
+    d['time'] = t_now
     f = open(CONFIG_FILE, 'w')
     json.dump(d, f, indent=4)
 
