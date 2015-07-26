@@ -23,6 +23,7 @@ then
 	# sudo port install libcudd
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]
 then
+	sudo apt-get install curl
 	sudo apt-get install qt4-qmake libglu-dev
 	# gcc v4.8
 	sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
