@@ -8,10 +8,10 @@ INSTALL=/usr/local/bin
 
 # have macports ?
 if hash port >/dev/null 2>&1; then
-    echo "found macports"
-    have_macports=true
+	echo "found macports"
+	have_macports=true
 else
-    echo "macports not found"
+	echo "macports not found"
 fi
 
 # dependencies
@@ -23,8 +23,8 @@ then
 	# sudo port install libcudd
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]
 then
-    sudo apt-get install qt4-qmake libglu-dev
-    # gcc v4.8
+	sudo apt-get install qt4-qmake libglu-dev
+	# gcc v4.8
 	sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 	sudo apt-get -qq update
 	sudo apt-get -qq install g++-4.8
@@ -78,3 +78,4 @@ else
 fi
 
 cd ../../
+
