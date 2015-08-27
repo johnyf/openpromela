@@ -45,6 +45,13 @@ def git_version(path):
 
 def snapshot_versions():
     """Log versions of software used."""
+    # existing log ?
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            d_old = json.load(f)
+    except IOError:
+        d_old = None
+    # get SHA
     paths = [
         '~/github/openpromela',
         '~/github/omega']
@@ -68,8 +75,16 @@ def snapshot_versions():
         d[s] = pkg.__version__
     t_now = time.strftime('%Y-%b-%d-%A-%T-%Z')
     d['time'] = t_now
-    f = open(CONFIG_FILE, 'w')
-    json.dump(d, f, indent=4)
+    # check versions
+    compare = list(packages)
+    compare.append('slugs')
+    if d_old is not None:
+        for k in compare:
+            assert d[k] == d_old[k]
+    # dump
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(d, f, indent=4)
+    return d
 
 
 def parse_logs(n, m):
