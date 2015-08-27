@@ -590,7 +590,7 @@ def plot_overall_summary(data, n_min, n_max):
     ax.set_yscale('log')
     plt.grid()
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.savefig('strategy_sizes_and_variable_bumbers.pdf',
+    plt.savefig('strategy_sizes_and_variable_numbers.pdf',
                 bbox_inches='tight')
 
 
