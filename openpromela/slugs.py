@@ -19,12 +19,10 @@ import psutil
 
 
 logger = logging.getLogger(__name__)
-slugs_log = logging.getLogger(__name__ + '.slugs')
-details_log = logging.getLogger(__name__ + '.details')
+DETAILS_LOG = 'details.txt'
 SLUGS_SPEC = 'slugs.txt'
 SLUGS_NICE = 'slugs_readable.txt'
 STRATEGY_FILE = 'slugs_strategy.txt'
-SLUGS_LOG_FILE = 'slugs_details.txt'
 
 
 def synthesize(spec, symbolic=True, filename=None):
@@ -98,7 +96,7 @@ def loads_enumerated_strategy(s):
 def _to_slugs(aut):
     """Return spec in `slugsin` format.
 
-    @type aut: `symbolic.Automaton`.
+    @type aut: `omega.symbolic.symbolic.Automaton`.
     """
     dbits = bitvector.list_bits(aut.vars)
     print('number of unprimed bits: {n}'.format(n=len(dbits)))
@@ -132,7 +130,8 @@ def _format_slugs_vars(dvars, owner, name):
     print('number of unprimed {owner} vars: {n}'.format(
         owner=owner, n=len(a)))
     a = natsort.natsorted(a)
-    return '[{name}]\n{vars}\n\n'.format(name=name, vars='\n'.join(a))
+    return '[{name}]\n{vars}\n\n'.format(
+        name=name, vars='\n'.join(a))
 
 
 def _call_slugs(filename, symbolic, strategy_file):
@@ -144,7 +143,28 @@ def _call_slugs(filename, symbolic, strategy_file):
         options.append('--jsonOutput')
     options.append(strategy_file)
     logger.debug('Calling: {cmd}'.format(cmd=' '.join(options)))
-    f = open(SLUGS_LOG_FILE, 'w')
+    # use a file, to avoid buffer deadlock of PIPE
+    with open(DETAILS_LOG, 'w') as f:
+        p = _popen(options, f)
+        _log_process(p)
+    _, err = p.communicate()
+    # error ?
+    if p.returncode != 0:
+        raise Exception(err + str(p.returncode))
+    # was realizable ?
+    if 'Specification is realizable' in err:
+        realizable = True
+        logger.info('realizable')
+    elif 'Specification is unrealizable' in err:
+        realizable = False
+        logger.info('not realizable')
+    else:
+        raise Exception(
+            'slugs stderr does not say whether realizable')
+    return realizable
+
+
+def _popen(options, f):
     try:
         p = subprocess32.Popen(
             options,
@@ -156,8 +176,12 @@ def _call_slugs(filename, symbolic, strategy_file):
             raise Exception('slugs not found in path.')
         else:
             raise
+    return p
+
+
+def _log_process(p):
     proc = psutil.Process(p.pid)
-    slugs_log.info('call slugs')
+    logger.info('call slugs')
     while p.poll() is None:
         try:
             user, system = proc.cpu_times()
@@ -168,32 +192,11 @@ def _call_slugs(filename, symbolic, strategy_file):
                 dt=dt,
                 rss=humanize.naturalsize(rss),
                 vms=humanize.naturalsize(vms))
-            slugs_log.info(s)
+            logger.info(s)
             print(s, end='\r')
             sys.stdout.flush()
         except psutil.AccessDenied:
             logger.debug('slugs has terminated already.')
         time.sleep(1.0)
     print(s)
-    slugs_log.info('slugs returned')
-    _, err = p.communicate()
-    f.close()
-    #msg = (
-    #    '\n slugs return code: {c}\n\n'.format(c=p.returncode) +
-    #    '\n slugs stderr: {c}\n\n'.format(c=err) +
-    #    '\n slugs stdout:\n\n {out}\n\n'.format(out=out))
-    #logger.debug(msg)
-    #details_log.info(out)
-    # error ?
-    if p.returncode != 0:
-        raise Exception(p.returncode)
-    # was realizable ?
-    if 'Specification is realizable' in err:
-        realizable = True
-        logger.info('realizable')
-    elif 'Specification is unrealizable' in err:
-        realizable = False
-        logger.info('not realizable')
-    else:
-        raise Exception('slugs stderr does not say whether realizable')
-    return realizable
+    logger.info('slugs returned')
