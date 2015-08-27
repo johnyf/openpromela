@@ -196,8 +196,9 @@ def parse_log(i):
                 x = time.strptime(t, '%H:%M:%S.%f')
             else:
                 x = time.strptime(t, '%H:%M:%S')
-            sec = datetime.timedelta(hours=x.tm_hour, minutes=x.tm_min,
-                                     seconds=x.tm_sec).total_seconds()
+            sec = datetime.timedelta(
+                hours=x.tm_hour, minutes=x.tm_min,
+                seconds=x.tm_sec).total_seconds()
             rss = float(rss)
             if size == 'k':
                 rss = 10**-3 * rss
