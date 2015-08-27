@@ -605,10 +605,6 @@ def main():
                    help='to this # of masters')
     p.add_argument('--debug', type=int, default=logging.ERROR,
                    help='python logging level')
-    p.add_argument('--log', action='store_true',
-                   help='dump debug log file')
-    p.add_argument('--plotonly', action='store_true',
-                   help='use existing log files to generate plots')
     p.add_argument('--plot', action='store_true',
                    help='generate plots')
     p.add_argument('--repeat', default=1, type=int,
