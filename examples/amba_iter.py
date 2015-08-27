@@ -23,6 +23,11 @@ import psutil
 
 
 logger = logging.getLogger(__name__)
+DEBUG = False  # for this script only
+if DEBUG:
+    sh = logging.StreamHandler()
+    logger.addHandler(sh)
+    logger.setLevel(logging.DEBUG)
 mpl.rc('xtick', labelsize=7)
 mpl.rc('ytick', labelsize=7)
 mpl.rc('font', size=7)
@@ -30,7 +35,6 @@ col_gen = cycle('bgrcmk')
 JSON_FILE = 'details.json'
 INPUT_FILE = 'amba.pml'
 CONFIG_FILE = 'config.json'
-DEBUG = False  # for this script only
 N = 2
 M = 17
 
@@ -223,11 +227,6 @@ def run(args):
     log.setLevel(level)
     log = logging.getLogger('openpromela.slugs.details')
     log.setLevel(level)
-    # own logger to screen
-    if DEBUG:
-        sh = logging.StreamHandler()
-        logger.addHandler(sh)
-        logger.setLevel(logging.DEBUG)
     # capture execution environment
     snapshot_versions()
     # run
