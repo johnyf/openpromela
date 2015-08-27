@@ -220,18 +220,85 @@ def run(args):
     n = args.min
     m = args.max + 1
     # config logging
-    # log to file
     level = args.debug
-    # slugs memory log files
-    level = logging.DEBUG - 1
-    log = logging.getLogger('openpromela.slugs')
-    log.setLevel(level)
-    log = logging.getLogger('openpromela.slugs.slugs')
-    log.setLevel(level)
-    log = logging.getLogger('openpromela.slugs.details')
-    log.setLevel(level)
+    loggers = ['openpromela.slugs']
+    for logname in loggers:
+        log = logging.getLogger(logname)
+        log.setLevel(level)
     # capture execution environment
     snapshot_versions()
+    # run
+    psutil_file = 'psutil.txt'
+    details_file = 'details.txt'
+    for i in xrange(n, m):
+        print('starting {i} masters...'.format(i=i))
+        bdd_file = 'bdd_{i}_masters.txt'.format(i=i)
+        # log
+        h_psutil = add_logfile(psutil_file, 'openpromela.slugs')
+        # run
+        t0 = time.time()
+        code = generate_code(i)
+        r = logic.synthesize(code, symbolic=True, filename=bdd_file)
+        t1 = time.time()
+        dt = datetime.timedelta(seconds=t1 - t0)
+        # close log files
+        close_logfile(h_psutil, 'openpromela.slugs')
+        assert r is not None, 'NOT REALISABLE !!!'
+        print('Done with {i} masters in {dt}.'.format(i=i, dt=dt))
+        # copy log file
+        i_psutil_file = 'log_{i}_masters.txt'.format(i=i)
+        i_details_file = 'details_{i}_masters.txt'.format(i=i)
+        shutil.copy(psutil_file, i_psutil_file)
+        shutil.copy(details_file, i_details_file)
+
+
+def add_logfile(fname, logger_name):
+    h = logging.FileHandler(fname, mode='w')
+    log = logging.getLogger(logger_name)
+    log.addHandler(h)
+    return h
+
+
+def close_logfile(h, logger_name):
+    log = logging.getLogger(logger_name)
+    log.removeHandler(h)
+    h.close()
+
+
+def generate_code(i):
+    # check if other users
+    users = psutil.get_users()
+    if len(users) > 1:
+        print('warning: other users logged in'
+              '(may start running expensive jobs).')
+    # input and iter
+    #
+    # use this for revised AMBA spec
+    input_file = INPUT_FILE
+    #
+    # use this for original AMBA spec
+    # input_file = 'amba_{i}.txt'.format(i=i)
+    #
+    # use this for original AMBA spec with fairness as BA
+    # input_file = 'amba_{i}_merged.txt'.format(i=i)
+    with open(input_file) as f:
+        s = f.read()
+    # prep input
+    j = i - 1
+    newline = '#define N {j}'.format(j=j)
+    code = re.sub('#define N.*', newline, s)
+    logger.debug(code)
+    # add multiple weak fairness assumptions
+    code += form_progress(i)
+    return code
+
+
+def plot_all_experiments(args):
+    """Dump a plot for each experiment, plus summary."""
+    n = args.min
+    m = args.max + 1
+    # capture execution environment
+    # TODO: check snapshot versions
     # run
     all_vars = list()
     env_vars = list()
@@ -241,56 +308,8 @@ def run(args):
     realizability_time = list()
     reordering_time = list()
     for i in xrange(n, m):
-        # check if other users
-        users = psutil.get_users()
-        if len(users) > 1:
-            print('warning: other users logged in'
-                  '(may start running expensive jobs).')
-        # input and iter
-        #
-        # use this for revised AMBA spec
-        input_file = INPUT_FILE
-        #
-        # use this for original AMBA spec
-        # input_file = 'amba_{i}.txt'.format(i=i)
-        #
-        # use this for original AMBA spec with fairness as BA
-        # input_file = 'amba_{i}_merged.txt'.format(i=i)
-        with open(input_file) as f:
-            s = f.read()
-        # prep input
-        j = i - 1
-        newline = '#define N {j}'.format(j=j)
-        code = re.sub('#define N.*', newline, s)
-        logger.debug(code)
-        # add multiple weak fairness assumptions
-        # code += form_progress(i)
-        # log and strategy file names
-        bdd_file = 'bdd_{i}_masters.txt'.format(i=i)
-        time_file = 'log_{i}_masters.txt'.format(i=i)
-        logged_details_file = 'slugs_details.txt'
         details_file = 'details_{i}_masters.txt'.format(i=i)
-        if not args.plotonly:
-            print('starting {i} masters...'.format(i=i))
-            # assign log file for timing
-            fh_time = logging.FileHandler(time_file)
-            log = logging.getLogger('openpromela.slugs.slugs')
-            log.addHandler(fh_time)
-            # run
-            t0 = time.time()
-            r = logic.synthesize(code, symbolic=True, filename=bdd_file)
-            t1 = time.time()
-            dt = datetime.timedelta(seconds=t1 - t0)
-            # close log files
-            log = logging.getLogger('openpromela.slugs.slugs')
-            log.removeHandler(fh_time)
-            fh_time.close()
-            assert r is not None, 'NOT REALISABLE !!!'
-            print('Done synthesizing {i} masters in {dt}.'.format(i=i, dt=dt))
-            # copy log file
-            shutil.copy(logged_details_file, details_file)
-        if not args.plot:
-            continue
+        code = generate_code(i)
         w = plot_single_experiment(code, details_file, i)
         all_vars.append(w[0])
         env_vars.append(w[1])
@@ -301,8 +320,6 @@ def run(args):
         total_time.append(w[4])
         realizability_time.append(w[5])
         reordering_time.append(w[6])
-    if not args.plot:
-        return
     # dump as JSON
     data = dict(
         all_vars=all_vars,
@@ -606,8 +623,12 @@ def main():
                    help='to this # of masters')
     p.add_argument('--debug', type=int, default=logging.ERROR,
                    help='python logging level')
+    p.add_argument('--run', default=False, action='store_true',
+                   help='synthesize')
     p.add_argument('--repeat', default=1, type=int,
                    help='multiple runs from min to max')
+    p.add_argument('--solver', default='slugs', type=str,
+                   choices=['slugs'])
     p.add_argument('--plot', action='store_true',
                    help='generate plots')
     p.add_argument('--plot-stats', action='store_true',
@@ -615,13 +636,20 @@ def main():
     args = p.parse_args()
     if args.plot_stats:
         parse_logs(args.min, args.max)
-        return
     # multiple runs should be w/o plots
     assert args.repeat == 1 or not args.plot
     # multiple runs
-    for i in xrange(args.repeat):
-        print('run: {i}'.format(i=i))
-        run(args)
+    if args.run:
+        for i in xrange(args.repeat):
+            print('run: {i}'.format(i=i))
+            if args.solver == 'slugs':
+                run(args)
+            else:
+                raise Exception(
+                    'unknown solver: {s}'.format(s=args.solver))
+    # plot
+    if args.plot:
+        plot_all_experiments(args)
 
 
 if __name__ == '__main__':
