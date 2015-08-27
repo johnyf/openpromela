@@ -606,10 +606,10 @@ def main():
                    help='to this # of masters')
     p.add_argument('--debug', type=int, default=logging.ERROR,
                    help='python logging level')
-    p.add_argument('--plot', action='store_true',
-                   help='generate plots')
     p.add_argument('--repeat', default=1, type=int,
                    help='multiple runs from min to max')
+    p.add_argument('--plot', action='store_true',
+                   help='generate plots')
     p.add_argument('--plot-stats', action='store_true',
                    help='plot time and memory for logged repeated runs')
     args = p.parse_args()
