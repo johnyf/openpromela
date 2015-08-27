@@ -94,7 +94,7 @@ def snapshot_versions():
 def parse_logs(n, m):
     """Plot time and memory for repeated experiments over range."""
     masters = range(n, m + 1)
-    fontsize = 10
+    fontsize = 15
     # parse logs
     all_data = dict()
     for i in masters:
@@ -120,8 +120,8 @@ def parse_logs(n, m):
     ax = plt.gca()
     ax.set_xscale('log')
     ax.set_yscale('log')
-    plt.xlabel('time (sec)')
-    plt.ylabel('memory (MB)')
+    plt.xlabel('time (sec)', fontsize=fontsize)
+    plt.ylabel('memory (MB)', fontsize=fontsize)
     plt.grid()
     fname = 'memory.pdf'
     plt.savefig(fname)
