@@ -28,8 +28,8 @@ STRATEGY_FILE = 'slugs_strategy.txt'
 SLUGS_LOG_FILE = 'slugs_details.txt'
 
 
-def synthesize(spec, symbolic=True, filename=None, make=True):
-    """Return strategy satisfying the specification `spec`.
+def synthesize(spec, symbolic=True, filename=None):
+    """Return `True` if realizable, dump strategy to `filename`.
 
     @param spec: first-order Street(1)
     @type spec: `symbolic.Automaton`
@@ -139,17 +139,14 @@ def _format_slugs_vars(dvars, owner, name):
     return '[{name}]\n{vars}\n\n'.format(name=name, vars='\n'.join(a))
 
 
-def _call_slugs(filename, symbolic, strategy_file, make):
+def _call_slugs(filename, symbolic, strategy_file):
     """Call `slugs` and log memory usage and time."""
     options = ['slugs', filename]
-    if make:
-        if symbolic:
-            options.append('--symbolicStrategy')
-        else:
-            options.append('--jsonOutput')
-        options.append(strategy_file)
+    if symbolic:
+        options.append('--symbolicStrategy')
     else:
-        options.append('--onlyRealizability')
+        options.append('--jsonOutput')
+    options.append(strategy_file)
     logger.debug('Calling: {cmd}'.format(cmd=' '.join(options)))
     f = open(SLUGS_LOG_FILE, 'w')
     try:
