@@ -184,7 +184,7 @@ def parse_log(i):
             data['time'].append(times)
             data['rss'].append(rss_memory)
             data['vms'].append(vms_memory)
-        else:
+        elif 'time:' in line:
             (t,) = re.findall('time:\s([\d\.:]+)', line)
             c = re.findall('rss:\s([\d.]+)\s([kMG])B', line)
             if c:
@@ -210,6 +210,8 @@ def parse_log(i):
             times.append(sec)
             rss_memory.append(rss)
             vms_memory.append(vms)
+        else:
+            print('ignored line')
     return data
 
 
