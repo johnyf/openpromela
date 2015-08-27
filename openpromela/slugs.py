@@ -9,7 +9,6 @@ import pprint
 import subprocess32
 import sys
 import time
-import tempfile
 import textwrap
 import humanize
 from omega.symbolic import symbolic as _symbolic
@@ -32,17 +31,11 @@ def synthesize(spec, symbolic=True, filename=None):
     """Return `True` if realizable, dump strategy to `filename`.
 
     @param spec: first-order Street(1)
-    @type spec: `symbolic.Automaton`
+    @type spec: `omega.symbolic.symbolic.Automaton`
     @param symbolic: select between symbolic and enumerated transducer
     @param filename: dump strategy in this file
         If symbolic, then this is a `dddmp` file (see `cudd`).
         If enumerated, then this is a `json` file (see `gr1c`).
-    @param make: if `False`, then only check realizability
-
-    @return: If realizable, then return `True` for symbolic
-        strategies (load them separately),
-        and a `networkx.DiGraph` for enumerated strategies.
-        If unrealizable, then return `None`.
     """
     if filename is None:
         strategy_file = STRATEGY_FILE
@@ -51,43 +44,41 @@ def synthesize(spec, symbolic=True, filename=None):
     logger.info('++ compile LTL to slugsin\n')
     aut = _symbolic._bitblast(spec)
     s = _to_slugs(aut)
-    # dump for use in manual debugging
-    if logger.getEffectiveLevel() < logging.DEBUG:
-        with open(SLUGS_SPEC, 'w') as f:
-            f.write(s)
-        with open(SLUGS_NICE, 'w') as f:
-            w = textwrap.fill(s, replace_whitespace=False)
-            f.write(w)
-    # call slugs
-    with tempfile.NamedTemporaryFile(delete=False) as fin:
-        fin.write(s)
-    logger.info('\n\n spec:\n\n {spec}'.format(
-        spec=spec) + '\n\n slugs in:\n\n {s}\n'.format(s=s))
-    logger.info('-- done compiling to slugsin')
-    realizable = _call_slugs(fin.name, symbolic, strategy_file, make)
-    os.unlink(fin.name)
-    if not realizable:
-        return None
-    # symbolic strategies may be large BDD files, so loaded separately
-    if symbolic:
-        return realizable
-    # enumerated strategy
-    with open(strategy_file, 'r') as f:
+    logger.info((
+        '\n\n spec:\n\n {spec}'
+        '\n\n slugsin:\n\n {s}'
+        '-- done compiling to slugsin').format(spec=spec, s=s))
+    # debug dump
+    with open(SLUGS_SPEC, 'w') as f:
+        f.write(s)
+    w = textwrap.fill(s, replace_whitespace=False)
+    with open(SLUGS_NICE, 'w') as f:
+        f.write(w)
+    realizable = _call_slugs(SLUGS_SPEC, symbolic, strategy_file)
+    return realizable
+
+
+def load_enumerated_strategy(json_file, spec):
+    """Return transducer for strategy in `bdd_file`.
+
+    @param json_file: `
+    @type json_file: `str`
+    @type spec: `omega.symbolic.symbolic.Automaton`
+    """
+    with open(json_file, 'r') as f:
         out = f.read()
-        g = load_strategy(out)
-    logger.debug(
-        ('loaded strategy with vertices:\n  {v}\n'
-         'and edges:\n {e}\n').format(
-            v='\n  '.join(str(x) for x in g.nodes(data=True)),
-            e=g.edges()))
+    g = loads_enumerated_strategy(out)
+    aut = _symbolic._bitblast(spec)
     h = bitvector.bitfield_to_int_states(g, aut.vars)
     return h
 
 
-def load_strategy(filename):
-    """Return `networkx.DiGraph` for strategy in JSON file."""
-    dout = json.loads(filename)
-    # use nx graph to represent strategy
+def loads_enumerated_strategy(s):
+    """Return `networkx.DiGraph` for strategy in `s`.
+
+    @type s: JSON `str`
+    """
+    dout = json.loads(s)
     g = nx.DiGraph()
     dvars = dout['variables']
     for stru, d in dout['nodes'].iteritems():
@@ -96,6 +87,11 @@ def load_strategy(filename):
         g.add_node(u, state=state)
         for v in d['trans']:
             g.add_edge(u, v)
+    logger.debug(
+        ('loaded strategy with vertices:\n  {v}\n'
+         'and edges:\n {e}\n').format(
+            v='\n  '.join(str(x) for x in g.nodes(data=True)),
+            e=g.edges()))
     return g
 
 
