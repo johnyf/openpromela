@@ -142,7 +142,7 @@ def close_logfile(h, logger_name):
 
 def generate_code(i):
     # check if other users
-    users = psutil.get_users()
+    users = psutil.users()
     if len(users) > 1:
         print('warning: other users logged in'
               '(may start running expensive jobs).')

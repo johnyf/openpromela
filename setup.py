@@ -24,7 +24,7 @@ install_requires = [
     'omega >= 0.0.1',
     'ply >= 3.4',
     'promela >= 0.0.1',
-    'psutil >= 2.2.0',
+    'psutil >= 3.1.1',
     'subprocess32 >= 3.2.6']
 
 
