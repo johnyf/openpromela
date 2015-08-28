@@ -91,131 +91,6 @@ def snapshot_versions():
     return d
 
 
-def parse_logs(n, m):
-    """Plot time and memory for repeated experiments over range."""
-    masters = range(n, m + 1)
-    fontsize = 15
-    # parse logs
-    all_data = dict()
-    for i in masters:
-        print('parsing master {i}'.format(i=i))
-        all_data[i] = parse_log(i)
-    # dump JSON file
-    fname = 'times.json'
-    with open(fname, 'w') as f:
-        json.dump(all_data, f)
-    # time vs memory per #masters
-    plt.figure(0)
-    plt.hold('on')
-    for i in masters:
-        print('ploting master {i}'.format(i=i))
-        d = all_data[i]
-        for t, rss in zip(d['time'], d['rss']):
-            color = col_gen.next()
-            plt.plot(t, rss, color=color)
-            total_time = t[-1]
-            mem = rss[-1]
-            plt.plot(total_time, mem, marker='o', color=color)
-            plt.text(total_time, mem, str(i))
-    ax = plt.gca()
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    plt.xlabel('time (sec)', fontsize=fontsize)
-    plt.ylabel('memory (MB)', fontsize=fontsize)
-    plt.grid()
-    fname = 'memory.pdf'
-    plt.savefig(fname)
-    # (time, memory) vs #masters
-    plt.figure(1)
-    data = dict(time=list(), memory=list())
-    num_of_samples = list()
-    for i in masters:
-        d = all_data[i]
-        t = [max(c) for c in d['time']]
-        m = [max(c) for c in d['rss']]
-        data['time'].append(t)
-        data['memory'].append(m)
-        num_of_samples.append(len(d['time']))
-    x = masters
-    plt.subplot(3, 1, 1)
-    plt.boxplot(data['time'], positions=x, manage_xticks=False)
-    mean_time = [np.mean(a) for a in data['time']]
-    plt.plot(x, mean_time, '--b')
-    ax = plt.gca()
-    ax.tick_params(labelsize=fontsize)
-    ax.set_yscale('log')
-    plt.ylabel('Total time (sec)', fontsize=fontsize)
-    plt.grid()
-    plt.subplot(3, 1, 2)
-    plt.boxplot(data['memory'], positions=x, manage_xticks=False)
-    ax = plt.gca()
-    ax.tick_params(labelsize=fontsize)
-    ax.set_yscale('log')
-    plt.ylabel('Max RSS\nmemory (MB)', fontsize=fontsize)
-    plt.grid()
-    plt.subplot(3, 1, 3)
-    plt.plot(x, num_of_samples, '--o')
-    ax = plt.gca()
-    ax.tick_params(labelsize=fontsize)
-    ya = ax.get_yaxis()
-    ya.set_major_locator(plt.MaxNLocator(integer=True))
-    plt.xlabel('Number of masters', fontsize=fontsize)
-    plt.ylabel('Number of\nsamples', fontsize=fontsize)
-    plt.grid()
-    if abs(M - N) > 16:
-        ticks = [i for i in x if (i % 4 == 0)]
-        plt.xticks(ticks)
-    # save file
-    fname = 'time.pdf'
-    plt.savefig(fname, bbox_inches='tight')
-
-
-def parse_log(i):
-    fname = './log_{i}_masters.txt'.format(i=i)
-    with open(fname, 'r') as f:
-        s = f.read()
-    data = dict(time=list(), rss=list(), vms=list())
-    for line in s.splitlines():
-        if 'call slugs' in line:
-            times = list()
-            rss_memory = list()
-            vms_memory = list()
-        elif 'slugs returned' in line:
-            data['time'].append(times)
-            data['rss'].append(rss_memory)
-            data['vms'].append(vms_memory)
-        elif 'time:' in line:
-            (t,) = re.findall('time:\s([\d\.:]+)', line)
-            c = re.findall('rss:\s([\d.]+)\s([kMG])B', line)
-            if c:
-                ((rss, size),) = c
-            else:
-                (rss,) = re.findall('rss:\s([\d.]+)\sBytes', line)
-            (vms,) = re.findall('vms:\s([\d]+)', line)
-            if '.' in t:
-                x = time.strptime(t, '%H:%M:%S.%f')
-            else:
-                x = time.strptime(t, '%H:%M:%S')
-            sec = datetime.timedelta(
-                hours=x.tm_hour, minutes=x.tm_min,
-                seconds=x.tm_sec).total_seconds()
-            rss = float(rss)
-            if size == 'k':
-                rss = 10**-3 * rss
-            elif size == 'G':
-                rss = 10**3 * rss
-            vms = float(vms)
-            if rss < 0.1:
-                print('warning: read ~0 rss, discarding')
-                continue
-            times.append(sec)
-            rss_memory.append(rss)
-            vms_memory.append(vms)
-        else:
-            print('ignored line')
-    return data
-
-
 def run(args):
     n = args.min
     m = args.max + 1
@@ -293,6 +168,14 @@ def generate_code(i):
     return code
 
 
+def form_progress(i):
+    """Return conjunction of LTL formulae for progress."""
+    prog = ' && '.join(
+        '[]<>(request[{k}] -> (master == {k}))'.format(k=k)
+        for k in xrange(i))
+    return 'assert ltl { ' + prog + ' }'
+
+
 def plot_all_experiments(args):
     """Dump a plot for each experiment, plus summary."""
     n = args.min
@@ -332,14 +215,6 @@ def plot_all_experiments(args):
     with open(JSON_FILE, 'w') as f:
         json.dump(data, f)
     plot_overall_summary(data, args.min, args.max)
-
-
-def form_progress(i):
-    """Return conjunction of LTL formulae for progress."""
-    prog = ' && '.join(
-        '[]<>(request[{k}] -> (master == {k}))'.format(k=k)
-        for k in xrange(i))
-    return 'assert ltl { ' + prog + ' }'
 
 
 def plot_single_experiment(code, details_file, i):
@@ -612,6 +487,131 @@ def plot_overall_summary(data, n_min, n_max):
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.savefig('strategy_sizes_and_variable_numbers.pdf',
                 bbox_inches='tight')
+
+
+def parse_logs(n, m):
+    """Plot time and memory for repeated experiments over range."""
+    masters = range(n, m + 1)
+    fontsize = 15
+    # parse logs
+    all_data = dict()
+    for i in masters:
+        print('parsing master {i}'.format(i=i))
+        all_data[i] = parse_log(i)
+    # dump JSON file
+    fname = 'times.json'
+    with open(fname, 'w') as f:
+        json.dump(all_data, f)
+    # time vs memory per #masters
+    plt.figure(0)
+    plt.hold('on')
+    for i in masters:
+        print('ploting master {i}'.format(i=i))
+        d = all_data[i]
+        for t, rss in zip(d['time'], d['rss']):
+            color = col_gen.next()
+            plt.plot(t, rss, color=color)
+            total_time = t[-1]
+            mem = rss[-1]
+            plt.plot(total_time, mem, marker='o', color=color)
+            plt.text(total_time, mem, str(i))
+    ax = plt.gca()
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    plt.xlabel('time (sec)', fontsize=fontsize)
+    plt.ylabel('memory (MB)', fontsize=fontsize)
+    plt.grid()
+    fname = 'memory.pdf'
+    plt.savefig(fname)
+    # (time, memory) vs #masters
+    plt.figure(1)
+    data = dict(time=list(), memory=list())
+    num_of_samples = list()
+    for i in masters:
+        d = all_data[i]
+        t = [max(c) for c in d['time']]
+        m = [max(c) for c in d['rss']]
+        data['time'].append(t)
+        data['memory'].append(m)
+        num_of_samples.append(len(d['time']))
+    x = masters
+    plt.subplot(3, 1, 1)
+    plt.boxplot(data['time'], positions=x, manage_xticks=False)
+    mean_time = [np.mean(a) for a in data['time']]
+    plt.plot(x, mean_time, '--b')
+    ax = plt.gca()
+    ax.tick_params(labelsize=fontsize)
+    ax.set_yscale('log')
+    plt.ylabel('Total time (sec)', fontsize=fontsize)
+    plt.grid()
+    plt.subplot(3, 1, 2)
+    plt.boxplot(data['memory'], positions=x, manage_xticks=False)
+    ax = plt.gca()
+    ax.tick_params(labelsize=fontsize)
+    ax.set_yscale('log')
+    plt.ylabel('Max RSS\nmemory (MB)', fontsize=fontsize)
+    plt.grid()
+    plt.subplot(3, 1, 3)
+    plt.plot(x, num_of_samples, '--o')
+    ax = plt.gca()
+    ax.tick_params(labelsize=fontsize)
+    ya = ax.get_yaxis()
+    ya.set_major_locator(plt.MaxNLocator(integer=True))
+    plt.xlabel('Number of masters', fontsize=fontsize)
+    plt.ylabel('Number of\nsamples', fontsize=fontsize)
+    plt.grid()
+    if abs(M - N) > 16:
+        ticks = [i for i in x if (i % 4 == 0)]
+        plt.xticks(ticks)
+    # save file
+    fname = 'time.pdf'
+    plt.savefig(fname, bbox_inches='tight')
+
+
+def parse_log(i):
+    fname = './log_{i}_masters.txt'.format(i=i)
+    with open(fname, 'r') as f:
+        s = f.read()
+    data = dict(time=list(), rss=list(), vms=list())
+    for line in s.splitlines():
+        if 'call slugs' in line:
+            times = list()
+            rss_memory = list()
+            vms_memory = list()
+        elif 'slugs returned' in line:
+            data['time'].append(times)
+            data['rss'].append(rss_memory)
+            data['vms'].append(vms_memory)
+        elif 'time:' in line:
+            (t,) = re.findall('time:\s([\d\.:]+)', line)
+            c = re.findall('rss:\s([\d.]+)\s([kMG])B', line)
+            if c:
+                ((rss, size),) = c
+            else:
+                (rss,) = re.findall('rss:\s([\d.]+)\sBytes', line)
+            (vms,) = re.findall('vms:\s([\d]+)', line)
+            if '.' in t:
+                x = time.strptime(t, '%H:%M:%S.%f')
+            else:
+                x = time.strptime(t, '%H:%M:%S')
+            sec = datetime.timedelta(
+                hours=x.tm_hour, minutes=x.tm_min,
+                seconds=x.tm_sec).total_seconds()
+            rss = float(rss)
+            if size == 'k':
+                rss = 10**-3 * rss
+            elif size == 'G':
+                rss = 10**3 * rss
+            vms = float(vms)
+            if rss < 0.1:
+                print('warning: read ~0 rss, discarding')
+                continue
+            times.append(sec)
+            rss_memory.append(rss)
+            vms_memory.append(vms)
+        else:
+            print('ignored line')
+    return data
 
 
 def main():
