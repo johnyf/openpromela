@@ -194,7 +194,7 @@ def _log_process(p):
                 vms=humanize.naturalsize(vms))
             logger.info(s)
             print(s, end='\r')
-            sys.stdout.flush()
+            sys.stdout.flush()  # python buffers `print`
         except psutil.AccessDenied:
             logger.debug('slugs has terminated already.')
         time.sleep(1.0)
