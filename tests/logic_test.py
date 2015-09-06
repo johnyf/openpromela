@@ -65,7 +65,8 @@ def test_trivial_unrealizable():
     c = '''
     assert ltl { []<> false }
     '''
-    assert logic.synthesize(c) is None
+    r = logic.synthesize(c)
+    assert not r, r
 
 
 def test_false_assumption():
@@ -84,7 +85,8 @@ def test_trivial_realizable():
     c = '''
     assert ltl { []<> true }
     '''
-    assert logic.synthesize(c) is not None
+    r = logic.synthesize(c)
+    assert r, r
 
 
 parser = logic.Parser()
@@ -147,8 +149,8 @@ def test_assume_assert_realizability():
     win.update({k: False for k in code if k not in realizable})
     for k, v in code.iteritems():
         print k
-        mealy = logic.synthesize(v)
-        assert win[k] != (mealy is None), (k, mealy)
+        r = logic.synthesize(v)
+        assert win[k] == r, (k, r)
     # print mealy
     # mealy.dump()
 
@@ -251,7 +253,7 @@ def test_executability():
         od
     }
     '''
-    assert logic.synthesize(c) is None
+    assert not logic.synthesize(c)
     # guard of: `x || y' = true`
     # but init to false, and is imperative var
     c = '''
@@ -264,7 +266,7 @@ def test_executability():
         od
     }
     '''
-    assert logic.synthesize(c) is None
+    assert not logic.synthesize(c)
     # y is primed, so deconstrained
     c = '''
     free env bool x;
@@ -276,7 +278,7 @@ def test_executability():
         od
     }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
     # y is free, but initially `false`
     c = '''
     free env bool x;
@@ -288,7 +290,7 @@ def test_executability():
         od
     }
     '''
-    assert logic.synthesize(c) is None
+    assert not logic.synthesize(c)
     # y is free
     c = '''
     free env bool x;
@@ -300,7 +302,7 @@ def test_executability():
         od
     }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
     c = '''
     free env bool x;
 
@@ -311,7 +313,7 @@ def test_executability():
         od
     }
     '''
-    assert logic.synthesize(c) is None
+    assert not logic.synthesize(c)
 
 
 def to_guard(p, assume):
@@ -422,7 +424,7 @@ def test_assume_sys():
 
     assert ltl { []<> x }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
     # sys must help env
     c = '''
     env bool x = false;
@@ -436,10 +438,10 @@ def test_assume_sys():
 
     assert ltl { [] ! x }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
     # must not be trivially realizable
     c += ' assert ltl { []<> false }'
-    assert logic.synthesize(c) is None
+    assert not logic.synthesize(c)
     # sys cannot avoid "[] x"
     c = '''
     env bool x = false;
@@ -452,7 +454,7 @@ def test_assume_sys():
 
     assert ltl { [] ! x}
     '''
-    assert logic.synthesize(c) is None
+    assert not logic.synthesize(c)
     # sys has to alternate
     c = '''
     env bool x = false;
@@ -466,10 +468,10 @@ def test_assume_sys():
 
     assert ltl { []<> x && []<> !x }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
     # not trivially
     c += ' assert ltl { []<> false }'
-    assert logic.synthesize(c) is None
+    assert not logic.synthesize(c)
     # a larger graph
     c = '''
     env int(0, 5) x = 0;
@@ -481,9 +483,9 @@ def test_assume_sys():
         od
     }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
     c += ' assert ltl { []<> false }'
-    assert logic.synthesize(c) is None
+    assert not logic.synthesize(c)
     # env deadlocked at init
     c = '''
     env bit x = 0;
@@ -502,9 +504,9 @@ def test_assume_sys():
 
     assert ltl { [](x == 0) }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
     c += 'assert ltl { []<> false }'
-    assert logic.synthesize(c) is None
+    assert not logic.synthesize(c)
 
 
 def test_env_sys_key():
@@ -545,7 +547,7 @@ def test_env_sys_key():
 
     assert ltl { []<>(z == 1) }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
 
 
 def test_atomic_sys_sys():
@@ -567,7 +569,7 @@ def test_atomic_sys_sys():
 
     assert ltl { []<> x }
     '''
-    assert logic.synthesize(c, strict_atomic=False) is not None
+    assert logic.synthesize(c, strict_atomic=False)
 
 
 def test_atomic_sys_env():
@@ -591,7 +593,7 @@ def test_atomic_sys_env():
 
     ltl { [] (x <-> y) }
     '''
-    assert logic.synthesize(c, strict_atomic=True) is not None
+    assert logic.synthesize(c, strict_atomic=True)
 
 
 def test_async_inside_sync():
@@ -738,8 +740,8 @@ def test_array():
         od
     }
     '''
-    mealy = logic.synthesize(c)
-    assert mealy is not None
+    r = logic.synthesize(c)
+    assert r
     c = '''
     active sys proctype foo(){
         int(0, 3) x[5] = 3;
@@ -752,8 +754,8 @@ def test_array():
         od
     }
     '''
-    mealy = logic.synthesize(c)
-    assert mealy is not None
+    r = logic.synthesize(c)
+    assert r
     c = '''
     active sys proctype foo(){
         int(0, 3) x[5] = 3;
@@ -766,8 +768,8 @@ def test_array():
         od
     }
     '''
-    mealy = logic.synthesize(c)
-    assert mealy is None
+    r = logic.synthesize(c)
+    assert not r
 
 
 def test_else():
@@ -808,8 +810,8 @@ def test_else():
         od
     }
     '''
-    mealy = logic.synthesize(c)
-    assert mealy is not None
+    r = logic.synthesize(c)
+    assert r
     c = '''
     bit x;
     bit y;
@@ -821,8 +823,8 @@ def test_else():
         od
     }
     '''
-    mealy = logic.synthesize(c)
-    assert mealy is None
+    r = logic.synthesize(c)
+    assert not r
     c = '''
     bit x;
     bit y;
@@ -834,8 +836,8 @@ def test_else():
         od
     }
     '''
-    mealy = logic.synthesize(c)
-    assert mealy is not None
+    r = logic.synthesize(c)
+    assert r
     c = '''
     bit x;
     bit y;
@@ -847,8 +849,8 @@ def test_else():
         od
     }
     '''
-    mealy = logic.synthesize(c)
-    assert mealy is None
+    r = logic.synthesize(c)
+    assert not r
 
 
 def test_else_bug():
@@ -863,7 +865,7 @@ def test_else_bug():
         od
     }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
 
 
 def test_sync():
@@ -883,8 +885,8 @@ def test_sync():
     }
     }
     '''
-    mealy = logic.synthesize(c)
-    assert mealy is None
+    r = logic.synthesize(c)
+    assert not r
 
 
 def test_collect_primed_vars():
@@ -933,7 +935,7 @@ def test_constrain_global_declarative_vars():
         od
     }
     '''
-    assert logic.synthesize(c) is not None
+    assert logic.synthesize(c)
 
 
 def test_remote_ref():
