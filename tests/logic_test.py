@@ -7,7 +7,7 @@ from openpromela import logic
 logger = logging.getLogger(__name__)
 # bit blasting log
 BIT_LOG = 'bitblaster.txt'
-bit_log = logging.getLogger('openpromela.bitvector')
+bit_log = logging.getLogger('omega.logic.bitvector')
 h = logging.FileHandler(BIT_LOG, mode='w')
 h.setLevel(logging.ERROR)
 bit_log.addHandler(h)
@@ -17,8 +17,8 @@ logging.getLogger('openpromela').setLevel('ERROR')
 logging.getLogger('promela.ast').setLevel('ERROR')
 logging.getLogger('promela.yacc').setLevel('ERROR')
 logging.getLogger('astutils').setLevel('ERROR')
-logging.getLogger('openpromela.logic').setLevel(1)
-logging.getLogger('openpromela.slugs').setLevel(1)
+logging.getLogger('openpromela.logic').setLevel('ERROR')
+logging.getLogger('openpromela.slugs').setLevel('ERROR')
 
 
 class Parser(logic.Parser):
