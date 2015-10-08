@@ -388,8 +388,8 @@ class AST(object):
             # type
             r = self.type
             if r in {'bool'}:
-                dom = 'boolean'
-                dtype = 'boolean'
+                dom = 'bool'
+                dtype = 'bool'
             elif r in {'bit'}:
                 dom = (0, 1)
                 dtype = 'modwrap'
@@ -419,8 +419,8 @@ class AST(object):
 
     class VarRef(ast.VarRef):
         def _context(self, d):
-            if d['dom'] == 'boolean':
-                return 'boolean'
+            if d['dom'] == 'bool':
+                return 'bool'
             else:
                 return 'numerical'
 
@@ -506,8 +506,8 @@ class AST(object):
         def to_logic(self, t, pid, *arg, **kw):
             flatname, var_context = self.var.to_logic(t, pid)
             value, val_context = self.value.to_logic(t, pid)
-            if var_context == 'boolean' or val_context == 'boolean':
-                context = 'boolean'
+            if var_context == 'bool' or val_context == 'bool':
+                context = 'bool'
                 op = '<->'
             else:
                 context = 'numerical'
@@ -536,7 +536,7 @@ class AST(object):
             c = [stmt.to_guard(t, pid, assume)
                  for stmt in self.other_guards]
             s = conj('! ({s})'.format(s=s) for s in c)
-            return s, 'boolean'
+            return s, 'bool'
 
         def to_guard(self, *arg, **kw):
             s, context = self.to_logic(*arg, **kw)
@@ -560,17 +560,17 @@ class AST(object):
             elif op in predicates:
                 assert xc == 'numerical', self
                 assert yc == 'numerical', self
-                c = 'boolean'
+                c = 'bool'
                 if op == '==':
                     op = '='  # convert to logic
             elif op in connectives:
-                assert xc == 'boolean', self
-                assert yc == 'boolean', self
-                c = 'boolean'
+                assert xc == 'bool', self
+                assert yc == 'bool', self
+                c = 'bool'
             else:
                 raise Exception('Unknown operator "{op}"'.format(
                     op=op))
-            # c = 'boolean'
+            # c = 'bool'
             # replace
             # if op == '==':
             #     op = '<->'
@@ -615,7 +615,7 @@ class AST(object):
             if self.operator in ('X', '~'):
                 c = xc
             elif self.operator in boolean_operators:
-                c = 'boolean'
+                c = 'bool'
             elif self.operator == '-':
                 c = 'numerical'
             else:
@@ -654,7 +654,7 @@ class AST(object):
 
     class Bool(ast.Bool):
         def to_logic(self, *arg, **kw):
-            return (str(self), 'boolean')
+            return (str(self), 'bool')
 
         def to_guard(self, *arg, **kw):
             return (str(self), False)
@@ -706,7 +706,7 @@ class AST(object):
             (u,) = nodes
             # formula
             s = '({pc} = {u})'.format(pc=pc, u=u)
-            return (s, 'boolean')
+            return (s, 'bool')
 
         def to_guard(self, *arg, **kw):
             s, c = self.to_logic(*arg, **kw)
@@ -915,7 +915,7 @@ def products_to_logic(products, global_defs):
             # that stops also the other player
             pm = pm_str(player)
             t.add_var(pid='aux', name=pm, flatname=pm,
-                      dom='boolean', dtype='boolean',
+                      dom='bool', dtype='bool',
                       free=True, owner=player,
                       init='false')
     # add key vars to table
@@ -2143,7 +2143,7 @@ def pm_str(player):
 
 
 def _invariant(flatname, dom, length=None):
-    if dom == 'boolean':
+    if dom == 'bool':
         op = '<->'
     else:
         op = '='

@@ -656,7 +656,7 @@ def test_array():
     ltl = next(iter(ltlblocks))
     f = ltl.formula
     s, context = f.to_logic(t, pid='global')
-    assert context == 'boolean', context
+    assert context == 'bool', context
     assert s == '(pidglobal_x2 = 0)', s
     s, pr = f.to_guard(
         t, pid='global', assume='sys', primed=False, negated=False)
@@ -685,7 +685,7 @@ def test_array():
     ltl = next(iter(ltlblocks))
     f = ltl.formula
     s, context = f.to_logic(t, pid='global')
-    assert context == 'boolean', context
+    assert context == 'bool', context
     correct = '(ite( {y} = 2, {x}2, ite( {y} = 1, {x}1, {x}0)) = 0)'.format(
         x='pidglobal_x', y='pidglobal_y')
     assert s == correct, s
@@ -894,7 +894,7 @@ def test_collect_primed_vars():
     pid = 'global'
     player = 'sys'
     t = logic.Table()
-    t.add_var(pid, 'y', 'y', 'boolean', 'boolean', True, player)
+    t.add_var(pid, 'y', 'y', 'bool', 'bool', True, player)
     # primed var
     e = expr_parser.parse("y' < 2")
     primed = logic.collect_primed_vars(e.expr, t, pid, player)
@@ -974,9 +974,9 @@ def scaffold():
     print(repr(tree))
     t = logic.Table()
     t.add_var(pid=0, name='x', flatname='pid0_x',
-              dom='boolean', free=False, owner='sys')
+              dom='bool', free=False, owner='sys')
     t.add_var(pid=0, name='y', flatname='pid0_y',
-              dom='boolean', free=False, owner='env')
+              dom='bool', free=False, owner='env')
     if logic.collect_primed_vars(tree, t, pid=0, player='sys'):
         print('has next var')
     else:
