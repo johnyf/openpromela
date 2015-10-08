@@ -1,2 +1,5 @@
 include tests/*.py
 include README.md
+include examples/amba_iter.py
+include examples/amba.pml
+include examples/bunny.pml
