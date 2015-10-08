@@ -12,7 +12,7 @@ h = logging.FileHandler(BIT_LOG, mode='w')
 h.setLevel(logging.ERROR)
 bit_log.addHandler(h)
 
-# avoid nose dumping PDFs
+logging.getLogger('omega').setLevel('ERROR')
 logging.getLogger('openpromela').setLevel('ERROR')
 logging.getLogger('promela.ast').setLevel('ERROR')
 logging.getLogger('promela.yacc').setLevel('ERROR')
