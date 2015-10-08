@@ -2267,7 +2267,12 @@ def map_to_future(aut):
             aut.win[q], aut.vars, free_init=init_dvars)
         a.vars.update(dvars)
         a.init[q].extend(i)
-        a.win[q].extend(f)
+        if q == 'env':
+            a.win['<>[]'].extend(f)
+        elif q == 'sys':
+            a.win['[]<>'].extend(f)
+        else:
+            raise Exception('unknown case "{q}"'.format(q=q))
     return a
 
 

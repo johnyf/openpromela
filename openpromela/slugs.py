@@ -109,11 +109,11 @@ def _to_slugs(aut):
         # env
         f(aut.init['env'], 'ENV_INIT') +
         f(aut.action['env'], 'ENV_TRANS') +
-        f(aut.win['env'], 'ENV_LIVENESS') +
+        f(aut.win['<>[]'], 'ENV_LIVENESS') +
         # sys
         f(aut.init['sys'], 'SYS_INIT') +
         f(aut.action['sys'], 'SYS_TRANS') +
-        f(aut.win['sys'], 'SYS_LIVENESS'))
+        f(aut.win['[]<>'], 'SYS_LIVENESS'))
 
 
 def _slugs_str(r, name, sep='\n'):
