@@ -1,4 +1,4 @@
-include tests/*.py
+include tests/*_test.py
 include README.md
 include examples/amba_iter.py
 include examples/amba.pml
