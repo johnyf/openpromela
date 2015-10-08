@@ -8,7 +8,6 @@ About
 A synthesizer from open Promela specifications. It:
 
 - translates open Promela to linear temporal logic
-- encodes bounded linear arithmetic in bitvector logic
 - calls the `slugs` synthesizer to check if the resulting formula is realizable and construct a transducer realizing a winning strategy
 - return the winning strategy as a Mealy machine
 
@@ -34,16 +33,10 @@ ospin --help
 Installation
 ============
 
-The Python dependencies can be installed using `pip >= 6.1.1`:
+Use `pip` for `openpromela` itself:
 
 ```
-pip install -r requirements.txt
-```
-
-When these dependencies stabilize, they will be made available on PyPI. After the dependencies are installed, then the `openpromela` package can be installed with:
-
-```
-python setup.py install
+pip install openpromela
 ```
 
 The only non-Python dependency is the synthesizer [`slugs`](https://github.com/LTLMoP/slugs). It can be installed by either running `install_slugs.sh`, or following its installation instructions.
