@@ -16,7 +16,7 @@ s = (
     '# This file was generated from setup.py\n'
     "version = '{version}'\n").format(version=version)
 install_requires = [
-    'dd >= 0.0.5',
+    'dd >= 0.1.3',
     'gitpython >= 1.0.1',
     'humanize >= 0.5.1',
     'natsort >= 3.5.3',
