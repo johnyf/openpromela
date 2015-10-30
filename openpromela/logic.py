@@ -2268,7 +2268,7 @@ def map_to_future(aut):
         a.vars.update(dvars)
         a.init[q].extend(i)
         if q == 'env':
-            a.win['<>[]'].extend(f)
+            a.win['<>[]'].extend('!({w})'.format(w=w) for w in f)
         elif q == 'sys':
             a.win['[]<>'].extend(f)
         else:
