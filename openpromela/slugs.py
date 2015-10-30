@@ -102,6 +102,8 @@ def _to_slugs(aut):
     print('number of unprimed bits: {n}'.format(n=len(dbits)))
     logger.debug(
         'slugs variables:\n{v}'.format(v=pprint.pformat(dbits)))
+    persistence = aut.win['<>[]']
+    recurrence = ['! {w}'.format(w=w) for w in persistence]
     f = _slugs_str
     return (
         _format_slugs_vars(dbits, 'env', 'INPUT') +
@@ -109,7 +111,7 @@ def _to_slugs(aut):
         # env
         f(aut.init['env'], 'ENV_INIT') +
         f(aut.action['env'], 'ENV_TRANS') +
-        f(aut.win['<>[]'], 'ENV_LIVENESS') +
+        f(recurrence, 'ENV_LIVENESS') +
         # sys
         f(aut.init['sys'], 'SYS_INIT') +
         f(aut.action['sys'], 'SYS_TRANS') +
