@@ -1,6 +1,7 @@
 from setuptools import setup
 # inline:
 # from openpromela import logic
+# import git
 
 
 description = (
@@ -10,11 +11,11 @@ VERSION_FILE = 'openpromela/_version.py'
 MAJOR = 0
 MINOR = 0
 MICRO = 3
-version = '{major}.{minor}.{micro}'.format(
+VERSION = '{major}.{minor}.{micro}'.format(
     major=MAJOR, minor=MINOR, micro=MICRO)
-s = (
+VERSION_TEXT = (
     '# This file was generated from setup.py\n'
-    "version = '{version}'\n").format(version=version)
+    "version = '{version}'\n")
 install_requires = [
     'dd >= 0.1.3',
     'gitpython >= 1.0.1',
@@ -28,6 +29,27 @@ install_requires = [
     'subprocess32 >= 3.2.6']
 
 
+def git_version(version):
+    import git
+    repo = git.Repo('.git')
+    repo.git.status()
+    sha = repo.head.commit.hexsha
+    if repo.is_dirty():
+        return '{v}.dev0+{sha}.dirty'.format(
+            v=version, sha=sha)
+    # commit is clean
+    # is it release of `version` ?
+    try:
+        tag = repo.git.describe(
+            match='v[0-9]*', exact_match=True,
+            tags=True, dirty=True)
+    except git.GitCommandError:
+        return '{v}.dev0+{sha}'.format(
+            v=version, sha=sha)
+    assert tag[1:] == version, (tag, version)
+    return version
+
+
 def build_parser_table():
     from openpromela import logic
     tabmodule = logic.TABMODULE.split('.')[-1]
@@ -37,8 +59,16 @@ def build_parser_table():
 
 
 if __name__ == '__main__':
+    # version
+    try:
+        version = git_version(VERSION)
+    except:
+        print('No git info: Assume release.')
+        version = VERSION
+    s = VERSION_TEXT.format(version=version)
     with open(VERSION_FILE, 'w') as f:
         f.write(s)
+    # build parsers
     try:
         build_parser_table()
     except ImportError:
