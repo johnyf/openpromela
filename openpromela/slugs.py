@@ -136,8 +136,19 @@ def _format_slugs_vars(dvars, owner, name):
         name=name, vars='\n'.join(a))
 
 
-def _call_slugs(filename, symbolic, strategy_file):
-    """Call `slugs` and log memory usage and time."""
+def _call_slugs(filename, symbolic, strategy_file,
+                affinity=None, logfile=None):
+    """Call `slugs` and log memory usage and time.
+
+    @param filename: path to SlugsIn file
+    @param symbolic: if `True`, then make symbolic strategy
+    @param strategy_file: dump strategy BDD in this file
+    @param affinity: run `slugs` on these CPUs
+    @type affinity: `list`
+    @param logfile: path to detailed log
+    """
+    if logfile is None:
+        logfile = DETAILS_LOG
     options = ['slugs', filename]
     if symbolic:
         options.append('--symbolicStrategy')
@@ -146,9 +157,9 @@ def _call_slugs(filename, symbolic, strategy_file):
     options.append(strategy_file)
     logger.debug('Calling: {cmd}'.format(cmd=' '.join(options)))
     # use a file, to avoid buffer deadlock of PIPE
-    with open(DETAILS_LOG, 'w') as f:
+    with open(logfile, 'w') as f:
         p = _popen(options, f)
-        _log_process(p)
+        _log_process(p, affinity)
     _, err = p.communicate()
     # error ?
     if p.returncode != 0:
@@ -181,8 +192,9 @@ def _popen(options, f):
     return p
 
 
-def _log_process(p):
+def _log_process(p, affinity):
     proc = psutil.Process(p.pid)
+    proc.cpu_affinity(affinity)
     logger.info('call slugs')
     while p.poll() is None:
         try:
