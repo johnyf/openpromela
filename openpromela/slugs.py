@@ -137,7 +137,8 @@ def _format_slugs_vars(dvars, owner, name):
 
 
 def _call_slugs(filename, symbolic, strategy_file,
-                affinity=None, logfile=None):
+                affinity=None, logfile=None,
+                other_options=None):
     """Call `slugs` and log memory usage and time.
 
     @param filename: path to SlugsIn file
@@ -150,6 +151,8 @@ def _call_slugs(filename, symbolic, strategy_file,
     if logfile is None:
         logfile = DETAILS_LOG
     options = ['slugs', filename]
+    if other_options is not None:
+        options.extend(other_options)
     if symbolic:
         options.append('--symbolicStrategy')
     else:
