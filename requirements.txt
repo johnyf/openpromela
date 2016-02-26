@@ -2,6 +2,7 @@
 pip>=6.1.1
 
 # dev tools
+gitpython >= 1.0.1
 coveralls>=0.5
 ipython>=1.2.1
 matplotlib==1.4.3

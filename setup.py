@@ -18,7 +18,6 @@ VERSION_TEXT = (
     "version = '{version}'\n")
 install_requires = [
     'dd >= 0.1.3',
-    'gitpython >= 1.0.1',
     'humanize >= 0.5.1',
     'natsort >= 3.5.3',
     'networkx >= 1.9.1',
