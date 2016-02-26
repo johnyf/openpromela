@@ -8,15 +8,19 @@ import logging
 import pprint
 import textwrap
 import warnings
-from dd import bdd as _bdd
+try:
+    from dd import cudd as _bdd
+except ImportError:
+    from dd import bdd as _bdd
+import dd.bdd
 import networkx as nx
 from networkx.utils import misc
 from promela import ast
 from promela import lex
 from promela import yacc
+import omega.games.gr1
 from omega.logic import bitvector
 from omega.logic import past
-from openpromela import slugs
 from openpromela import _version
 from omega.symbolic import symbolic as _symbolic
 from omega import gr1
@@ -1534,7 +1538,7 @@ def _expr_to_guard(e, aut, player, as_bdd=False):
     bdd = aut.bdd
     u = aut.add_expr(e)
     (v,) = aut.action[player]  # integer range limits
-    u = _bdd.preimage(u, v, rename, qvars, bdd, forall=False)
+    u = dd.bdd.preimage(u, v, rename, qvars, bdd, forall=False)
     if u == -1:
         print('Warning: guard "{e}" evaluates to "False".'.format(e=e))
     if as_bdd:
@@ -2233,7 +2237,7 @@ def compile_spec(code, strict_atomic=True):
     return spc
 
 
-def synthesize(code, strict_atomic=True, symbolic=False, **kw):
+def synthesize(code, strict_atomic=True, filename=None):
     """Return `True` if realizable.
 
     If realizable, then a winning strategy is dumped.
@@ -2241,9 +2245,28 @@ def synthesize(code, strict_atomic=True, symbolic=False, **kw):
     @param strict_atomic: if `True`, then deactivate LTL safety
         properties during atomic execution.
     """
+    if filename is None:
+        filename = 'strategy.p'
     spc = compile_spec(code, strict_atomic)
-    realizable = slugs.synthesize(spc, symbolic=symbolic, **kw)
-    return realizable
+    bdd = _bdd.BDD()
+    _symbolic.fill_blanks(spc)
+    aut = spc.build(bdd=bdd)
+    z, yij, xijk = omega.games.gr1.solve_streett_game(aut)
+    try:
+        t = omega.games.gr1.make_streett_transducer(
+            z, yij, xijk, aut, bdd=aut.bdd)
+    except AssertionError:
+        t = None
+    del z, yij, xijk
+    if t is None:
+        return False
+    (u,) = t.action['sys']
+    try:
+        t.bdd.dump(filename, roots=[u])
+    except TypeError:
+        t.bdd.dump(u, filename)  # cudd
+    del u
+    return True
 
 
 def map_to_future(aut):
@@ -2311,9 +2334,7 @@ def command_line_wrapper():
     """Entry point available as `ospin` script."""
     logs = {'openpromela.logic',
             'openpromela.bitvector',
-            'openpromela.slugs',
             'promela.yacc.parser'}
-    slugs_log_name = 'openpromela.bitvector.slugs'
     debug_log_file = 'debug_log.txt'
     p = argparse.ArgumentParser(
         description=(
@@ -2344,8 +2365,6 @@ def command_line_wrapper():
         log.addHandler(fh)
     sh = logging.StreamHandler()
     sh.setLevel(level)
-    slugs_log = logging.getLogger(slugs_log_name)
-    slugs_log.addHandler(sh)
     with open(args.fname, 'r') as f:
         s = f.read()
     mealy = synthesize(s, symbolic=args.symbolic)

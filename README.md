@@ -39,7 +39,8 @@ Use `pip` for `openpromela` itself:
 pip install openpromela
 ```
 
-The only non-Python dependency is the synthesizer [`slugs`](https://github.com/LTLMoP/slugs). It can be installed by either running `install_slugs.sh`, or following its installation instructions.
+Pure Python dependencies suffice, unless you have a demanding problem.
+In that case, build `dd.cudd` to interface to CUDD.
 
 
 License

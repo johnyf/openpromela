@@ -170,8 +170,8 @@ def test_bdd_filename():
         od
     }
     '''
-    fname = 'mybdd.txt'
-    assert logic.synthesize(c, filename=fname, symbolic=True)
+    fname = 'mybdd.p'
+    assert logic.synthesize(c, filename=fname)
     assert os.path.isfile(fname)
 
 
