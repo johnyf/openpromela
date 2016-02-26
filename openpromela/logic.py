@@ -2234,14 +2234,16 @@ def compile_spec(code, strict_atomic=True):
 
 
 def synthesize(code, strict_atomic=True, symbolic=False, **kw):
-    """Call GR(1) synthesis tool and return winning transducer.
+    """Return `True` if realizable.
+
+    If realizable, then a winning strategy is dumped.
 
     @param strict_atomic: if `True`, then deactivate LTL safety
         properties during atomic execution.
     """
     spc = compile_spec(code, strict_atomic)
-    mealy = slugs.synthesize(spc, symbolic=symbolic, **kw)
-    return mealy
+    realizable = slugs.synthesize(spc, symbolic=symbolic, **kw)
+    return realizable
 
 
 def map_to_future(aut):
