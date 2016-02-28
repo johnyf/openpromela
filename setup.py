@@ -19,7 +19,7 @@ VERSION_TEXT = (
 install_requires = [
     'dd >= 0.3.0',
     'networkx >= 1.9.1',
-    'omega >= 0.0.3',
+    'omega >= 0.0.7',
     'ply >= 3.4',
     'promela >= 0.0.1']
 
