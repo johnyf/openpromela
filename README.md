@@ -7,9 +7,9 @@ About
 
 A synthesizer from open Promela specifications. It:
 
-- translates open Promela to linear temporal logic
-- calls the `slugs` synthesizer to check if the resulting formula is realizable and construct a transducer realizing a winning strategy
-- return the winning strategy as a Mealy machine
+- translates open Promela to linear temporal logic (LTL)
+- compiles the LTL formula to an implementation using the GR(1) game solver [`omega.games.gr1`](https://github.com/johnyf/omega/blob/master/omega/games/gr1.py)
+- dumps a transition relation that implements the open Promela specification.
 
 The language and implementation are documented in:
 
