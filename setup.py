@@ -18,14 +18,10 @@ VERSION_TEXT = (
     "version = '{version}'\n")
 install_requires = [
     'dd >= 0.1.3',
-    'humanize >= 0.5.1',
-    'natsort >= 3.5.3',
     'networkx >= 1.9.1',
     'omega >= 0.0.3',
     'ply >= 3.4',
-    'promela >= 0.0.1',
-    'psutil >= 3.1.1',
-    'subprocess32 >= 3.2.6']
+    'promela >= 0.0.1']
 
 
 def git_version(version):
