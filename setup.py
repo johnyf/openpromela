@@ -10,7 +10,7 @@ README = 'README.md'
 VERSION_FILE = 'openpromela/_version.py'
 MAJOR = 0
 MINOR = 1
-MICRO = 0
+MICRO = 1
 VERSION = '{major}.{minor}.{micro}'.format(
     major=MAJOR, minor=MINOR, micro=MICRO)
 VERSION_TEXT = (
