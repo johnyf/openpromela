@@ -1424,7 +1424,7 @@ def guards_for_loss_of_atomicity(g, t, pid, aut):
                 # sys primed vars have been quantified already
                 # (use `rename` when extended to support
                 # target vars that are neighbors but essential)
-                support = bdd.support(guard, as_levels=False)
+                support = bdd.support(guard)
                 assert set(support).issubset(aut.bdd.vars), (
                     support, aut.vars)
                 to_rename = {var for var in support
@@ -1435,7 +1435,7 @@ def guards_for_loss_of_atomicity(g, t, pid, aut):
                     var_node = bdd.var(var)
                     guard = bdd.compose(guard, pvar, var_node)
                 # confirm rename
-                new_support = bdd.support(guard, as_levels=False)
+                new_support = bdd.support(guard)
                 remain = to_rename.intersection(new_support)
                 assert not remain, remain
             guard = bdd.to_expr(guard)
