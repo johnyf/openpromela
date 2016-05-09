@@ -12,7 +12,6 @@ try:
     from dd import cudd as _bdd
 except ImportError:
     from dd import bdd as _bdd
-import dd.bdd
 import networkx as nx
 from networkx.utils import misc
 from promela import ast
@@ -1548,11 +1547,11 @@ def _expr_to_guard(e, aut, player, as_bdd=False):
         qvars = aut.upvars
     elif player == 'sys':
         qvars = aut.epvars
-    rename = dict()
     bdd = aut.bdd
     u = aut.add_expr(e)
     (v,) = aut.action[player]  # integer range limits
-    u = dd.bdd.preimage(u, v, rename, qvars, bdd, forall=False)
+    u = bdd.apply('and', u, v)
+    u = bdd.exist(qvars, u)
     if u == bdd.false:
         print('Warning: guard "{e}" evaluates to "False".'.format(e=e))
     if as_bdd:
