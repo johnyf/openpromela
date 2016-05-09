@@ -2278,23 +2278,25 @@ def map_to_future(aut):
     a.vars = copy.deepcopy(aut.vars)
     for q in ('env', 'sys'):
         # init
-        init_dvars, i, f = past.map_translate(
+        _, f, init, action, win = past.map_translate(
             aut.init[q], aut.vars)
-        a.vars.update(init_dvars)
-        # a.init[q].extend(i)
-        # "previous" in init over-writes anchoring semantics
+        assert not win, win
         a.init[q].extend(f)
         # action
-        dvars, i, f = past.map_translate(
-            aut.action[q], aut.vars, free_init=init_dvars)
+        dvars, f, init, action, win = past.map_translate(
+            aut.action[q], aut.vars)
+        assert not win, win
         a.vars.update(dvars)
-        a.init[q].extend(i)
         a.action[q].extend(f)
+        a.init[q].extend(init)
+        a.action[q].extend(action)
         # win
-        dvars, i, f = past.map_translate(
-            aut.win[q], aut.vars, free_init=init_dvars)
+        dvars, f, init, action, win = past.map_translate(
+            aut.win[q], aut.vars)
+        assert not win, win
         a.vars.update(dvars)
-        a.init[q].extend(i)
+        a.init[q].extend(init)
+        a.action[q].extend(action)
         if q == 'env':
             a.win['<>[]'].extend('!({w})'.format(w=w) for w in f)
         elif q == 'sys':
