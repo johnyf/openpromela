@@ -265,7 +265,7 @@ def test_executability():
     assert active sys proctype main(){
         bool y;
         do
-        :: x || y /* true */
+        :: x || y
         od
     }
     '''
@@ -277,7 +277,7 @@ def test_executability():
     assert active sys proctype main(){
         free bool y;
         do
-        :: x || y' /* true */
+        :: x || y'
         od
     }
     '''
@@ -289,7 +289,7 @@ def test_executability():
     assert active sys proctype main(){
         free bool y = false;
         do
-        :: x || y /* true */
+        :: x || y
         od
     }
     '''
@@ -301,7 +301,7 @@ def test_executability():
     assert active sys proctype main(){
         free bool y;
         do
-        :: x || y /* true */
+        :: x || y
         od
     }
     '''
