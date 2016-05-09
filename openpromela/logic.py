@@ -1426,7 +1426,7 @@ def guards_for_loss_of_atomicity(g, t, pid, aut):
                 # target vars that are neighbors but essential)
                 support = bdd.support(guard)
                 assert set(support).issubset(aut.bdd.vars), (
-                    support, aut.vars)
+                    support, aut.bdd.vars)
                 to_rename = {var for var in support
                              if var in aut.upvars}
                 # TODO: ensure neighbors, then use `bdd.rename`
