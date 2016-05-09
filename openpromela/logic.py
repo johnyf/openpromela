@@ -1429,10 +1429,9 @@ def guards_for_loss_of_atomicity(g, t, pid, aut):
                     support, aut.bdd.vars)
                 to_rename = {var for var in support
                              if var in aut.upvars}
-                for pvar in to_rename:
-                    var = aut.unprime[pvar]
-                    var_node = bdd.var(var)
-                    guard = bdd.compose(guard, pvar, var_node)
+                rename = {var: aut.unprime[var]
+                          for var in to_rename}
+                guard = _rename_using_compose(guard, rename, bdd)
                 # confirm rename
                 new_support = bdd.support(guard)
                 remain = to_rename.intersection(new_support)
@@ -1446,6 +1445,21 @@ def guards_for_loss_of_atomicity(g, t, pid, aut):
             pc=pc, u=u, u_unblocked=u_unblocked)
         c.append(s)
     return disj(c)
+
+
+def _rename_using_compose(u, rename, bdd):
+    """Simple but inefficient renaming using `BDD.compose`.
+
+    Works when target variables are in support of `u`.
+    Also, can be used for testing `BDD.rename`.
+    """
+    # nothing to do?
+    if not rename:
+        return u
+    var_sub = {
+        old: bdd.var(new)
+        for old, new in rename.iteritems()}
+    return bdd.compose(u, var_sub)
 
 
 def graph_to_control_flow(g, t, pid, aut):
