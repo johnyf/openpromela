@@ -1429,7 +1429,6 @@ def guards_for_loss_of_atomicity(g, t, pid, aut):
                     support, aut.bdd.vars)
                 to_rename = {var for var in support
                              if var in aut.upvars}
-                # TODO: ensure neighbors, then use `bdd.rename`
                 for pvar in to_rename:
                     var = aut.unprime[pvar]
                     var_node = bdd.var(var)
