@@ -1540,7 +1540,7 @@ def _expr_to_guard(e, aut, player, as_bdd=False):
     u = aut.add_expr(e)
     (v,) = aut.action[player]  # integer range limits
     u = dd.bdd.preimage(u, v, rename, qvars, bdd, forall=False)
-    if u == -1:
+    if u == bdd.false:
         print('Warning: guard "{e}" evaluates to "False".'.format(e=e))
     if as_bdd:
         r = u
