@@ -1157,6 +1157,8 @@ def processes_to_logic(atomic, t, global_defs):
     flat_table = t.flatten()
     aut = _symbolic.Automaton()
     aut.vars = flat_table
+    assert aut.vars, 'no variables defined'
+    aut.bdd = _bdd.BDD()
     aut = aut.build()
     # flatten
     pids = dict()
@@ -2250,11 +2252,12 @@ def synthesize(code, strict_atomic=True, filename=None):
     spc = compile_spec(code, strict_atomic)
     bdd = _bdd.BDD()
     _symbolic.fill_blanks(spc)
-    aut = spc.build(bdd=bdd)
+    spc.bdd = bdd
+    aut = spc.build()
     z, yij, xijk = omega.games.gr1.solve_streett_game(aut)
     try:
         t = omega.games.gr1.make_streett_transducer(
-            z, yij, xijk, aut, bdd=aut.bdd)
+            z, yij, xijk, aut)
     except AssertionError:
         t = None
     del z, yij, xijk

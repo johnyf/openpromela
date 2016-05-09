@@ -63,6 +63,7 @@ def test_disj():
 def test_trivial_unrealizable():
     """If realizable, then the assumption is False."""
     c = '''
+    bool x;
     assert ltl { []<> false }
     '''
     r = logic.synthesize(c)
@@ -71,6 +72,7 @@ def test_trivial_unrealizable():
 
 def test_false_assumption():
     c = '''
+    bool x;
     assume ltl { false }
 
     assert ltl { []<> false }
@@ -83,6 +85,7 @@ def test_false_assumption():
 
 def test_trivial_realizable():
     c = '''
+    bool x;
     assert ltl { []<> true }
     '''
     r = logic.synthesize(c)

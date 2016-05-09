@@ -98,7 +98,7 @@ def _to_slugs(aut):
 
     @type aut: `omega.symbolic.symbolic.Automaton`.
     """
-    dbits = bitvector.list_bits(aut.vars)
+    dbits = bitvector.bit_table(aut.vars, aut.vars)
     print('number of unprimed bits: {n}'.format(n=len(dbits)))
     logger.debug(
         'slugs variables:\n{v}'.format(v=pprint.pformat(dbits)))
