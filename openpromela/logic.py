@@ -1548,7 +1548,6 @@ def _expr_to_guard(e, aut, player, as_bdd=False):
         qvars = aut.upvars
     elif player == 'sys':
         qvars = aut.epvars
-    # rename = aut.prime
     rename = dict()
     bdd = aut.bdd
     u = aut.add_expr(e)
