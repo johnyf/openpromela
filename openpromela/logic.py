@@ -2290,12 +2290,12 @@ def map_to_future(aut):
     for q in ('env', 'sys'):
         # init
         _, f, init, action, win = past.map_translate(
-            aut.init[q], aut.vars)
+            aut.init[q])
         assert not win, win
         a.init[q].extend(f)
         # action
         dvars, f, init, action, win = past.map_translate(
-            aut.action[q], aut.vars)
+            aut.action[q])
         assert not win, win
         a.vars.update(dvars)
         a.action[q].extend(f)
@@ -2303,7 +2303,7 @@ def map_to_future(aut):
         a.action[q].extend(action)
         # win
         dvars, f, init, action, win = past.map_translate(
-            aut.win[q], aut.vars)
+            aut.win[q])
         assert not win, win
         a.vars.update(dvars)
         a.init[q].extend(init)
