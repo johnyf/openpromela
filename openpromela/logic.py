@@ -8,22 +8,26 @@ import logging
 import pprint
 import textwrap
 import warnings
+
 try:
     from dd import cudd as _bdd
 except ImportError:
     from dd import bdd as _bdd
 import networkx as nx
 from networkx.utils import misc
+import omega.games.gr1
+from omega import gr1
+from omega.logic import bitvector
+from omega.logic import past
+from omega.logic.syntax import conj
+from omega.logic.syntax import disj
+from omega.symbolic import symbolic as _symbolic
 from promela import ast
 from promela import lex
 from promela import yacc
-import omega.games.gr1
-from omega.logic import bitvector
-from omega.logic import past
+
+
 from openpromela import _version
-from omega.symbolic import symbolic as _symbolic
-from omega import gr1
-from omega.logic.syntax import conj, disj
 
 
 logger = logging.getLogger(__name__)
