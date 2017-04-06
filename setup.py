@@ -21,7 +21,7 @@ install_requires = [
     'networkx >= 1.9.1',
     'omega >= 0.1.1',
     'ply >= 3.4',
-    'promela >= 0.0.1']
+    'promela >= 0.0.2']
 classifiers = [
     'Development Status :: 2 - Pre-Alpha',
     'Intended Audience :: Science/Research',
