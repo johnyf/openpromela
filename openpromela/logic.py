@@ -963,9 +963,9 @@ def products_to_logic(products, global_defs):
     sys_init = conj(sys_init)
     env_safe = conj(env_safe)
     sys_safe = conj(sys_safe)
-    env_prog = [y for x in pids.itervalues()
+    env_prog = [y for x in pids.values()
                 for y in x['progress']['env']]
-    sys_prog = [y for x in pids.itervalues()
+    sys_prog = [y for x in pids.values()
                 for y in x['progress']['sys']]
     return (t, env_init, sys_init, env_safe, sys_safe,
             env_prog, sys_prog, atomic, top_ps)
