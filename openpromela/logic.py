@@ -2267,6 +2267,9 @@ def synthesize(code, strict_atomic=True, filename=None):
     bdd = _bdd.BDD()
     _symbolic.fill_blanks(spc)
     spc.bdd = bdd
+    spc.moore = False
+    spc.plus_one = False
+    spc.qinit = '\A \E'
     aut = spc.build()
     z, yij, xijk = omega.games.gr1.solve_streett_game(aut)
     try:
