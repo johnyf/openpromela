@@ -970,8 +970,16 @@ def test_remote_ref():
     u, v, d = e
     stmt = d['stmt']
     assert isinstance(stmt, logic.AST.Expression), stmt
-    f, _ = stmt.to_logic(t=t, pid=0)
-    assert f == '(pc1 = 1)', (f, t.pids)
+    assert len(t.pids) == 2, t.pids
+    if t.pids[0]['proctype'] == 'foo':
+        pid_foo, pid_bar = 0, 1
+    elif t.pids[1]['proctype'] == 'foo':
+        pid_foo, pid_bar = 1, 0
+    else:
+        raise Exception(t.pids)
+    f, _ = stmt.to_logic(t=t, pid=pid_foo)
+    f_ = '(pc{pid_bar} = 1)'.format(pid_bar=pid_bar)
+    assert f == f_, (f, t.pids)
 
 
 def scaffold():
