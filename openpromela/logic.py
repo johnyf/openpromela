@@ -452,7 +452,7 @@ class AST(object):
                     'arithmetic expression').format(e=e)
                 # TODO: implement more efficiently with log selector
                 s = flatnames[0]
-                for i in xrange(1, d['length']):
+                for i in range(1, d['length']):
                     element = flatnames[i]
                     s = 'ite( {expr} = {i}, {element}, {s})'.format(
                         expr=e,
@@ -892,7 +892,7 @@ def array_to_flatnames(flatname, length):
     assert length > 0, length
     # one variable per array element
     return ['{flatname}{i}'.format(flatname=flatname, i=i)
-            for i in xrange(length)]
+            for i in range(length)]
 
 
 def products_to_logic(products, global_defs):
@@ -933,7 +933,7 @@ def products_to_logic(products, global_defs):
         max_key = max(max_key, g.max_key)
     for assume, d in n_keys.items():
         for owner, nk in d.items():
-            for i in xrange(nk):
+            for i in range(nk):
                 var = key_str(assume, owner, i)
                 dom = (0, max_key)
                 t.add_var(pid='aux', name=var, flatname=var,
@@ -1137,7 +1137,7 @@ def add_processes(atomic, t, global_defs):
         ps = d['parent_ps']
         gid = d['gid']
         lid = d['lid']
-        for j in xrange(g.active):
+        for j in range(g.active):
             pid = t.add_pid(g.name, g.owner, ps,
                             gid, lid, assume=g.assume)
             add_variables_to_table(t, g.locals, pid, g.assume)
@@ -1168,7 +1168,7 @@ def processes_to_logic(atomic, t, global_defs):
     for name, d in t.proctypes.items():
         g = d['program_graph']
         inst = d['instances']
-        for j in xrange(g.active):
+        for j in range(g.active):
             pid = inst[j]
             process_to_logic(pid, t, atomic, pids, global_defs, aut)
             logger.info('\t instance {j}'.format(j=j))
