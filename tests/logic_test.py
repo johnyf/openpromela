@@ -924,10 +924,13 @@ def test_constrain_global_declarative_vars():
     w.insert_logic_var(t, 'sys', 'global')
     # global_defs = [y, z, w]
     r = logic.freeze_declarative_vars(t, 'env')
-    s = (
+    s1 = (
         '(((X pidglobal_y) <-> pidglobal_y)) &'
         ' (((X pidglobal_z) <-> pidglobal_z))')
-    assert r == s, r
+    s2 = (
+        '(((X pidglobal_z) <-> pidglobal_z)) &'
+        ' (((X pidglobal_y) <-> pidglobal_y))')
+    assert r == s1 or r == s2, r
     # env must freeze
     c = '''
     free env bit x;
