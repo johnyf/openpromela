@@ -42,4 +42,4 @@ def load():
 if __name__ == '__main__':
     gr1, vartypes = load()
     g = bv.synthesize(gr1, vartypes)
-    print g
+    print(g)

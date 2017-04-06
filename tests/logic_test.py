@@ -151,7 +151,7 @@ def test_assume_assert_realizability():
     win = {k: True for k in realizable}
     win.update({k: False for k in code if k not in realizable})
     for k, v in code.items():
-        print k
+        print(k)
         r = logic.synthesize(v)
         assert win[k] == r, (k, r)
     # print mealy
@@ -799,8 +799,8 @@ def test_else():
         c = d['stmt']
         if not isinstance(c, logic.AST.Else):
             continue
-        print c.to_logic(t, pid=0, assume='sys')
-        print c.to_guard(t, pid=0, assume='sys')
+        print(c.to_logic(t, pid=0, assume='sys'))
+        print(c.to_guard(t, pid=0, assume='sys'))
     # realizability
     c = '''
     bit x;
