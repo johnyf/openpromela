@@ -17,7 +17,7 @@ VERSION_TEXT = (
     '# This file was generated from setup.py\n'
     "version = '{version}'\n")
 install_requires = [
-    'dd >= 0.3.0',
+    'dd >= 0.5.2',
     'networkx >= 1.9.1',
     'omega >= 0.0.7',
     'ply >= 3.4',
