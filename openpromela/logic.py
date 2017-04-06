@@ -800,8 +800,8 @@ class Table(object):
 
     def variables_iter(self):
         """Return generator over tuples `(pid, var, dict)`."""
-        for pid, localvars in self.scopes.iteritems():
-            for var, d in localvars.iteritems():
+        for pid, localvars in self.scopes.items():
+            for var, d in localvars.items():
                 yield (pid, var, d)
 
     def add_var(self, pid, name, flatname, dom, dtype,
@@ -928,11 +928,11 @@ def products_to_logic(products, global_defs):
     # add key vars to table
     # TODO: optimize key domain sizes
     max_key = 0
-    for name, d in t.proctypes.iteritems():
+    for name, d in t.proctypes.items():
         g = d['program_graph']
         max_key = max(max_key, g.max_key)
-    for assume, d in n_keys.iteritems():
-        for owner, nk in d.iteritems():
+    for assume, d in n_keys.items():
+        for owner, nk in d.items():
             for i in xrange(nk):
                 var = key_str(assume, owner, i)
                 dom = (0, max_key)
@@ -1109,17 +1109,17 @@ def max_edge_multiplicity(g, n=None):
     else:
         nbunch = g
     return max(len(uv) for u in nbunch
-               for v, uv in g.succ[u].iteritems())
+               for v, uv in g.succ[u].items())
 
 
 def who_has_atomic(t):
     d = dict(env=0, sys=0)
-    for name, dproc in t.proctypes.iteritems():
+    for name, dproc in t.proctypes.items():
         g = dproc['program_graph']
         assume = g.assume
         if has_atomic(g):
             d[assume] += 1
-    return {k: (v > 0) for k, v in d.iteritems()}
+    return {k: (v > 0) for k, v in d.items()}
 
 
 def has_atomic(g):
@@ -1132,7 +1132,7 @@ def add_processes(atomic, t, global_defs):
     """Instantiate processes for each proctype in `proctypes`."""
     # instantiate each proctype
     # a process is an instance of a proctype
-    for name, d in t.proctypes.iteritems():
+    for name, d in t.proctypes.items():
         g = d['program_graph']
         ps = d['parent_ps']
         gid = d['gid']
@@ -1165,7 +1165,7 @@ def processes_to_logic(atomic, t, global_defs):
     aut = aut.build()
     # flatten
     pids = dict()
-    for name, d in t.proctypes.iteritems():
+    for name, d in t.proctypes.items():
         g = d['program_graph']
         inst = d['instances']
         for j in xrange(g.active):
@@ -1402,7 +1402,7 @@ def form_notexe_condition(g, t, pid, global_defs, aut):
         c[u] = disj(r)
     s = disj(
         '({pc} = {u}) & !({b})'.format(pc=pc, u=u, b=b)
-        for u, b in c.iteritems())
+        for u, b in c.items())
     return s
 
 
@@ -1461,7 +1461,7 @@ def _rename_using_compose(u, rename, bdd):
         return u
     var_sub = {
         old: bdd.var(new)
-        for old, new in rename.iteritems()}
+        for old, new in rename.items()}
     return bdd.compose(u, var_sub)
 
 
@@ -1585,7 +1585,7 @@ def transform_ltl_blocks(ltl, t):
             continue
         f, _ = e.to_logic(t, pid='global')
         c = gr1.split_gr1(f)
-        [d[assume][k].extend(v) for k, v in c.iteritems()]
+        [d[assume][k].extend(v) for k, v in c.items()]
     # conjoin (except for liveness)
     for assume in {'assume', 'assert'}:
         for part in {'init', 'G'}:
@@ -1674,7 +1674,7 @@ def constrain_imperative_vars(pids, t, player='sys'):
     gl = list()
     # locals
     c = list()  # constraints
-    for pid, localvars in t.scopes.iteritems():
+    for pid, localvars in t.scopes.items():
         # global vars handled differently
         if pid in {'global', 'aux'}:
             continue
@@ -1683,7 +1683,7 @@ def constrain_imperative_vars(pids, t, player='sys'):
         if t.pids[pid]['assume'] != player:
             continue
         var2edges = pids[pid]['var2edges']
-        for var, d in localvars.iteritems():
+        for var, d in localvars.items():
             flatname = d['flatname']
             # has declarative semantics ?
             if d['free']:
@@ -1721,7 +1721,7 @@ def constrain_imperative_vars(pids, t, player='sys'):
     # globals
     c = list()
     gvars = t.scopes['global']
-    for var, d in gvars.iteritems():
+    for var, d in gvars.items():
         flatname = d['flatname']
         # not imperative ?
         if d['free']:
@@ -1852,7 +1852,7 @@ def constrain_local_declarative_vars(t):
     """Return constraints for free variables when their pid is idle."""
     logger.info('++ constraining free local vars...')
     c = {'env': list(), 'sys': list()}
-    for pid, scope in t.scopes.iteritems():
+    for pid, scope in t.scopes.items():
         # not a process ?
         if pid in {'global', 'aux'}:
             continue
@@ -1861,7 +1861,7 @@ def constrain_local_declarative_vars(t):
         gid = t.pids[pid]['gid']
         # if pid idle, then local free vars of both players
         # must remain invariant
-        for var, d in scope.iteritems():
+        for var, d in scope.items():
             # not declarative ?
             if not d['free']:
                 logger.debug('"{var}" not free variable'.format(var=var))
@@ -1872,7 +1872,7 @@ def constrain_local_declarative_vars(t):
                 ps=ps, gid=gid, invariant=inv)
             var_owner = d['owner']
             c[var_owner].append(s)
-    for k, v in c.iteritems():
+    for k, v in c.items():
         c[k] = '\n\n# declarative var constraints\n{f}'.format(
             f=conj(v, sep='\n'))
     logger.info('-- done with free local vars.\n')
@@ -1888,13 +1888,13 @@ def freeze_declarative_vars(t, player):
     # freeze free vars of `player` in global scope or
     # in opponent's processes
     c = list()
-    for pid, scope in t.scopes.iteritems():
+    for pid, scope in t.scopes.items():
         # not global or in opponent process ?
         if pid == 'aux':
             continue
         if pid != 'global' and t.pids[pid]['assume'] == player:
             continue
-        for var, d in scope.iteritems():
+        for var, d in scope.items():
             if not d['free']:
                 logger.debug('"{var}" not free variable'.format(var=var))
                 continue
@@ -1914,7 +1914,7 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
     deadlock = dict()
     init = {'env': list(), 'sys': list()}
     safety = {'env': list(), 'sys': list()}
-    for pid, f in pids.iteritems():
+    for pid, f in pids.items():
         # pid constrains given player ?
         dpid = t.pids[pid]
         assume = dpid['assume']
@@ -2037,7 +2037,7 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
     assert deadlock, deadlock
     # handle process products
     c = list()
-    for gid, v in deadlock.iteritems():
+    for gid, v in deadlock.items():
         s = disj(v)
         c.append(s)
     deadlocked = conj(c, sep='\n')
@@ -2054,7 +2054,7 @@ def add_process_scheduler(t, pids, player, atomic, top_ps):
                 deadlocked=deadlocked,
                 ps=ps, ps_max=ps_max))
     # process scheduler vars
-    for ps, d in t.products.iteritems():
+    for ps, d in t.products.items():
         parent_ps = d['parent_ps']
         # top async ?
         if parent_ps is None:
@@ -2325,7 +2325,7 @@ def dump_ltl_to_json(spc):
     def f(x):
         return conj(x).split('\n')
     dvars = dict()
-    for var, d in spc.vars.iteritems():
+    for var, d in spc.vars.items():
         b = dict(d)
         init = b.get('init')
         if init is not None:

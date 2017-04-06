@@ -79,7 +79,7 @@ def loads_enumerated_strategy(s):
     dout = json.loads(s)
     g = nx.DiGraph()
     dvars = dout['variables']
-    for stru, d in dout['nodes'].iteritems():
+    for stru, d in dout['nodes'].items():
         u = int(stru)
         state = dict(zip(dvars, d['state']))
         g.add_node(u, state=state)
@@ -127,7 +127,7 @@ def _slugs_str(r, name, sep='\n'):
 
 
 def _format_slugs_vars(dvars, owner, name):
-    a = [var for var, d in dvars.iteritems()
+    a = [var for var, d in dvars.items()
          if d['owner'] == owner]
     print('number of unprimed {owner} vars: {n}'.format(
         owner=owner, n=len(a)))
