@@ -352,7 +352,7 @@ class AST(object):
                         'Got instead: min = {min}, max = {max}'.format(
                             min=self.min, max=self.max))
             else:
-                assert isinstance(vartype, basestring)
+                assert isinstance(vartype, str)
                 typ = vartype
             # imperative modwrap int initially at minimum of domain
             if initval is None and self.min is not None and not free:
