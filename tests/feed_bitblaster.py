@@ -28,7 +28,7 @@ def load():
     sys_prog = f(d['sys_prog'])
     dvars = d['vars']
     # restore tuples
-    for var, d in dvars.iteritems():
+    for var, d in dvars.items():
         if d['type'] != 'int':
             continue
         d['dom'] = tuple(d['dom'])

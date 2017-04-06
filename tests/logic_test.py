@@ -150,7 +150,7 @@ def test_assume_assert_realizability():
         'sys again'}
     win = {k: True for k in realizable}
     win.update({k: False for k in code if k not in realizable})
-    for k, v in code.iteritems():
+    for k, v in code.items():
         print k
         r = logic.synthesize(v)
         assert win[k] == r, (k, r)
