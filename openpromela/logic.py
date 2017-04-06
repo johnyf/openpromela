@@ -19,8 +19,7 @@ import omega.games.gr1
 from omega import gr1
 from omega.logic import bitvector
 from omega.logic import past
-from omega.logic.syntax import conj
-from omega.logic.syntax import disj
+from omega.logic import syntax
 from omega.symbolic import symbolic as _symbolic
 from promela import ast
 from promela import lex
@@ -2403,6 +2402,16 @@ def command_line_wrapper():
     else:
         if not args.symbolic:
             print(mealy)
+
+
+def conj(c, sep=''):
+    """Return conjunction as `str` using operator `&`."""
+    return syntax.conj(c, op='&', sep=sep)
+
+
+def disj(c, sep=''):
+    """Return disjunction as `str` using operator `|`."""
+    return syntax.disj(c, op='|', sep=sep)
 
 
 if __name__ == '__main__':
