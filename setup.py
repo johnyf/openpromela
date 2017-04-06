@@ -22,6 +22,18 @@ install_requires = [
     'omega >= 0.0.7',
     'ply >= 3.4',
     'promela >= 0.0.1']
+classifiers = [
+    'Development Status :: 2 - Pre-Alpha',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: BSD License',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3',
+    'Topic :: Scientific/Engineering']
+keywords = [
+    'openpromela', 'promela', 'open system', 'specification',
+    'synthesis', 'verification', 'symbolic']
 
 
 def git_version(version):
@@ -84,4 +96,6 @@ if __name__ == '__main__':
         package_dir={'openpromela': 'openpromela'},
         entry_points={
             'console_scripts':
-                ['ospin = openpromela.logic:command_line_wrapper']})
+                ['ospin = openpromela.logic:command_line_wrapper']},
+        classifiers=classifiers,
+        keywords=keywords)
