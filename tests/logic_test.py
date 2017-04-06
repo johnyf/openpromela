@@ -42,7 +42,7 @@ def test_conj():
     assert f(['a', 'False']) == 'False'
     assert f(['True', 'True', 'b', 'c']) == '(b) & (c)'
     assert f([]) == 'True'
-    assert f(str(x) for x in xrange(1)) == '0'
+    assert f(str(x) for x in range(1)) == '0'
     assert f(str(x) for x in []) == 'True'
     assert f(['', 'a', 'b']) == '(a) & (b)'
 
@@ -55,7 +55,7 @@ def test_disj():
     assert f(['a', 'True']) == 'True'
     assert f(['False', 'False', 'b', 'c']) == '(b) | (c)'
     assert f([]) == 'False'
-    assert f(str(x) for x in xrange(1)) == '0'
+    assert f(str(x) for x in range(1)) == '0'
     assert f(str(x) for x in []) == 'False'
     assert f(['', 'a', 'b']) == '(a) | (b)'
 
