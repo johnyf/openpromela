@@ -81,7 +81,7 @@ def loads_enumerated_strategy(s):
     dvars = dout['variables']
     for stru, d in dout['nodes'].items():
         u = int(stru)
-        state = dict(zip(dvars, d['state']))
+        state = dict(list(zip(dvars, d['state'])))
         g.add_node(u, state=state)
         for v in d['trans']:
             g.add_edge(u, v)
