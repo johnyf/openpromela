@@ -10,6 +10,7 @@ openpromela/_version.py
 Icon?
 
 *.*~
+__pycache__
 *.pyc
 *.p
 *.swp
